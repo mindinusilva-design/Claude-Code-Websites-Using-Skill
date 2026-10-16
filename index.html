@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Red Bull Wings Scroll</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=Big+Shoulders+Display:wght@800;900&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: four pinned scroll stages (wings hero, horizontal timeline, altitude gauge) with a chart and a loop diagram between them. */
+:root {
+  --ink: #050b24;        /* deep night navy, page ground */
+  --navy: #0d1d55;       /* panels */
+  --blue: #2146a8;       /* can blue */
+  --red: #ec2a4d;        /* signal red */
+  --sun: #ffc20e;        /* sun yellow */
+  --silver: #c9d1e0;     /* can silver, primary text */
+  --mute: #8d99b8;       /* secondary text */
+  --line: #24356f;       /* hairlines and grid */
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --util: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--silver);
+  font-family: var(--body);
+  font-size: 18px;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+a { color: var(--sun); }
+a:focus-visible, summary:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+.wrap { padding-left: var(--gutter-l); padding-right: var(--gutter-r); max-width: 1200px; margin: 0 auto; }
+.eyebrow { font-family: var(--util); font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-size: 14px; color: var(--sun); margin: 0 0 12px; }
+h2 { font-family: var(--display); font-weight: 900; text-transform: uppercase; line-height: .92; letter-spacing: .005em; font-size: clamp(44px, 9vw, 104px); margin: 0 0 20px; color: #fff; text-wrap: balance; }
+p { max-width: 62ch; margin: 0 0 1em; }
+
+/* progress bar */
+.progress { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; height: 4px; z-index: 20; background: transparent; }
+.progress i { display: block; height: 100%; width: 100%; background: var(--red); transform-origin: left; transform: scaleX(var(--page, 0)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 19; background: var(--ink); }
+
+/* pinned stage */
+.pin { position: relative; height: 380vh; }
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+
+/* HERO */
+.hero { height: 400vh; }
+.hero .stage { background: radial-gradient(120% 90% at 50% 40%, #16307f 0%, var(--ink) 70%); }
+.hero-words { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--display); font-weight: 900; text-transform: uppercase; line-height: .82; font-size: clamp(76px, 20vw, 270px); letter-spacing: .01em; text-align: center; pointer-events: none; }
+.hero-words span { display: block; opacity: calc(.18 + var(--w, 0) * .82); transform: translateY(calc((1 - var(--w, 0)) * 40px)); color: #fff; }
+.hero-words span:nth-child(2) { color: var(--sun); }
+.hero-words span:nth-child(3) { color: var(--red); }
+.hero-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-top { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 22px); left: var(--gutter-l); right: var(--gutter-r); display: flex; justify-content: space-between; gap: 12px; font-family: var(--util); font-weight: 600; letter-spacing: .16em; text-transform: uppercase; font-size: 14px; color: var(--mute); }
+.cue { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); left: 0; right: 0; text-align: center; font-family: var(--util); letter-spacing: .2em; text-transform: uppercase; font-size: 14px; color: var(--silver); opacity: calc(1 - var(--p, 0) * 6); }
+.cue::after { content: ""; display: block; width: 2px; height: 34px; margin: 8px auto 0; background: linear-gradient(var(--sun), transparent); animation: drip 1.6s ease-in-out infinite; transform-origin: top; }
+@keyframes drip { 0% { transform: scaleY(0); } 60% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+
+/* STORY */
+.intro { padding-block: 120px 80px; }
+.intro .big { font-family: var(--display); font-weight: 800; font-size: clamp(30px, 5vw, 60px); line-height: 1.02; text-transform: uppercase; color: #fff; max-width: 22ch; margin: 0 0 32px; }
+.intro .big em { font-style: normal; color: var(--red); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin: 40px 0 0; padding: 0; list-style: none; }
+.facts li { border-top: 3px solid var(--red); padding: 14px 0 0; }
+.facts b { display: block; font-family: var(--display); font-size: 44px; line-height: 1; color: #fff; font-weight: 900; }
+.facts span { font-size: 15px; color: var(--mute); }
+
+/* TIMELINE */
+.timeline .stage { background: var(--navy); display: flex; flex-direction: column; justify-content: center; }
+.tl-head { padding-left: var(--gutter-l); padding-right: var(--gutter-r); margin-bottom: 28px; }
+.tl-head h2 { margin: 0; font-size: clamp(40px, 7vw, 84px); }
+.track { display: flex; gap: 20px; padding-left: var(--gutter-l); padding-right: 40vw; will-change: transform; }
+.card { flex: 0 0 min(78vw, 360px); background: var(--ink); border: 1px solid var(--line); padding: 22px 22px 26px; min-height: 270px; display: flex; flex-direction: column; gap: 8px; }
+.card .yr { font-family: var(--display); font-weight: 900; font-size: 76px; line-height: .9; color: var(--red); font-variant-numeric: tabular-nums; }
+.card h3 { margin: 0; font-family: var(--display); font-size: 28px; text-transform: uppercase; color: #fff; line-height: 1; }
+.card p { font-size: 16px; color: var(--silver); margin: 0; }
+.card.now { border-color: var(--sun); }
+.card.now .yr { color: var(--sun); }
+.tl-bar { margin: 28px var(--gutter-r) 0 var(--gutter-l); height: 3px; background: var(--line); position: relative; }
+.tl-bar i { position: absolute; inset: 0; background: var(--sun); transform-origin: left; transform: scaleX(var(--p, 0)); }
+
+/* CHART */
+.chartband { padding-block: 120px; background: linear-gradient(var(--ink), #091440 40%, var(--ink)); }
+.chart-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: center; }
+.chart-card { background: var(--navy); border: 1px solid var(--line); padding: 20px 16px 12px; }
+.chart-card h3 { margin: 0 0 4px; font-family: var(--util); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 16px; color: #fff; }
+.chart-card .sub { font-size: 14px; color: var(--mute); margin: 0 0 12px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart text { fill: var(--mute); font-family: var(--util); font-size: 14px; font-variant-numeric: tabular-nums; }
+.chart .val { fill: #fff; font-weight: 600; font-size: 17px; }
+.bar { fill: var(--red); transform-box: fill-box; transform-origin: bottom; transform: scaleY(var(--g, 1)); transition: fill .15s; }
+.bar:hover, .bar:focus-visible { fill: var(--sun); outline: none; }
+.chart-card details { margin-top: 8px; font-size: 14px; color: var(--mute); }
+.chart-card summary { cursor: pointer; padding: 6px 0; }
+.chart-card table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.chart-card th, .chart-card td { text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); }
+.chart-card td:last-child, .chart-card th:last-child { text-align: right; }
+
+/* ECOSYSTEM DIAGRAM */
+.loop { padding-block: 40px 140px; }
+.loop figure { margin: 36px 0 0; background: var(--navy); border: 1px solid var(--line); padding: 16px; }
+.loop svg { width: 100%; height: auto; display: block; color: var(--silver); }
+.loop figcaption { font-size: 15px; color: var(--mute); margin-top: 10px; max-width: 70ch; }
+.loop .edge { stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--g, 1)); }
+.loop .node text, .loop .elabel { font-family: var(--util); font-weight: 600; }
+.elabel { font-size: 15px; fill: var(--sun); letter-spacing: .06em; text-transform: uppercase; }
+
+/* STRATOS */
+.stratos .stage { background: linear-gradient(to top, #2146a8 0%, #0d1d55 35%, #02040f 100%); }
+.strat-grid { height: 100%; display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 32px; align-items: center; padding-left: var(--gutter-l); padding-right: var(--gutter-r); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); max-width: 1200px; margin: 0 auto; }
+.gauge { height: min(86vh, 640px); width: 100%; }
+.gauge svg { height: 100%; width: auto; max-width: 100%; display: block; }
+.gauge text { font-family: var(--util); font-weight: 600; font-size: 15px; fill: var(--silver); }
+.alt { font-family: var(--display); font-weight: 900; color: #fff; font-size: clamp(64px, 14vw, 190px); line-height: .85; font-variant-numeric: tabular-nums; }
+.alt { margin-bottom: .18em; }
+.alt small { font-size: .28em; color: var(--sun); margin-left: .15em; letter-spacing: .04em; }
+.strat-copy { min-width: 0; }
+.strat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 28px; opacity: var(--s, 1); transform: translateY(calc((1 - var(--s, 1)) * 24px)); }
+.strat-stats div { border-top: 3px solid var(--red); padding-top: 8px; }
+.strat-stats b { display: block; font-family: var(--display); font-size: 40px; line-height: 1; color: #fff; }
+.strat-stats span { font-size: 14px; color: var(--silver); }
+.strat-note { font-size: 16px; min-height: 3.2em; color: var(--silver); }
+
+footer { padding-block: 80px calc(60px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); font-size: 14px; color: var(--mute); }
+footer p { max-width: 70ch; }
+
+@media (max-width: 760px) {
+  body { font-size: 17px; }
+  .chart-grid { grid-template-columns: minmax(0, 1fr); }
+  .strat-grid { grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: 12px; }
+  .intro { padding-block: 80px 60px; }
+  .chartband { padding-block: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .cue::after { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"><i></i></div>
+
+<!-- HERO: wings open as you scroll -->
+<section class="pin hero" id="hero" aria-label="Red Bull gives you wings">
+  <div class="stage">
+    <div class="hero-words" aria-hidden="true"><span>Gives</span><span>You</span><span>Wings</span></div>
+    <svg class="hero-svg" id="heroSvg" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid meet" role="img" aria-label="An illustrated energy drink can that grows white wings as the page scrolls">
+      <defs>
+        <clipPath id="canClip"><rect x="240" y="230" width="120" height="330" rx="16"/></clipPath>
+        <linearGradient id="shine" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".22" stop-color="#fff" stop-opacity=".38"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#000" stop-opacity=".0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient>
+      </defs>
+      <circle id="sun" cx="300" cy="380" r="210" fill="#ffc20e"/>
+      <g id="wingL"></g>
+      <g id="wingR"></g>
+      <g id="can">
+        <g clip-path="url(#canClip)">
+          <rect x="240" y="230" width="120" height="330" fill="#c9d1e0"/>
+          <rect x="240" y="300" width="120" height="260" fill="#2146a8"/>
+          <polygon points="240,300 360,260 360,300" fill="#c9d1e0"/>
+          <rect x="240" y="372" width="120" height="44" fill="#ec2a4d"/>
+          <rect x="240" y="230" width="120" height="330" fill="url(#shine)"/>
+        </g>
+        <rect x="248" y="220" width="104" height="14" rx="6" fill="#98a3bd"/>
+        <rect x="262" y="214" width="76" height="10" rx="5" fill="#b4bdd2"/>
+        <text x="300" y="403" text-anchor="middle" font-family="Big Shoulders Display, Impact, sans-serif" font-weight="900" font-size="30" fill="#fff" letter-spacing="1">RED BULL</text>
+        <text x="300" y="470" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="13" fill="#c9d1e0" letter-spacing="3">ENERGY DRINK</text>
+        <text x="300" y="528" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="600" font-size="13" fill="#c9d1e0" letter-spacing="2">250 ML</text>
+      </g>
+    </svg>
+    <div class="hero-top"><span>An unofficial fan tribute</span><span>Est. 1987 · Fuschl am See</span></div>
+    <div class="cue">Scroll</div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section class="intro">
+  <div class="wrap">
+    <p class="eyebrow">The short version</p>
+    <p class="big">A Thai tonic, an Austrian marketer and <em>one</em> idea about <em>energy.</em></p>
+    <p>Red Bull started as Krating Daeng, a tonic sold in Thailand. An Austrian marketing executive, Dietrich Mateschitz, tasted it on a work trip, struck a partnership with its creator and rebuilt it as a slim silver and blue can with its own sparkling recipe. Then the company did something unusual. It put most of its marketing into events, athletes and its own media.</p>
+    <ul class="facts">
+      <li><b>250 ml</b><span>the original can, still the core size</span></li>
+      <li><b>80 mg</b><span>caffeine in a 250 ml can</span></li>
+      <li><b>~175</b><span>countries where it is sold</span></li>
+      <li><b>12.1 bn</b><span>cans sold in 2023, per the company</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- TIMELINE: horizontal scroll driven by vertical scroll -->
+<section class="pin timeline" id="timeline" aria-label="Timeline">
+  <div class="stage">
+    <div class="tl-head"><p class="eyebrow">Timeline</p><h2>From a tonic to a team</h2></div>
+    <div class="track" id="track">
+      <article class="card"><span class="yr">1976</span><h3>Krating Daeng</h3><p>Chaleo Yoovidhya launches the tonic in Thailand. The name means red gaur, a large wild bull.</p></article>
+      <article class="card"><span class="yr">1984</span><h3>A partnership</h3><p>Mateschitz and Yoovidhya found Red Bull GmbH, each holding 49 percent, and spend three years adapting the product.</p></article>
+      <article class="card"><span class="yr">1987</span><h3>First Austrian can</h3><p>Red Bull goes on sale in Austria. The slogan, “Red Bull gives you wings”, follows soon after.</p></article>
+      <article class="card"><span class="yr">1997</span><h3>Into the US</h3><p>The first American market is California, after launches across Europe.</p></article>
+      <article class="card"><span class="yr">2005</span><h3>A Formula 1 team</h3><p>The company buys the Jaguar F1 team and races as Red Bull Racing. Its first drivers' title comes in 2010.</p></article>
+      <article class="card"><span class="yr">2012</span><h3>Stratos</h3><p>Felix Baumgartner steps off a capsule at the edge of space. Over 8 million people watch live online.</p></article>
+      <article class="card now"><span class="yr">2022</span><h3>A new chapter</h3><p>Dietrich Mateschitz dies in October at age 78. The company keeps its sport and media model.</p></article>
+    </div>
+    <div class="tl-bar" aria-hidden="true"><i></i></div>
+  </div>
+</section>
+
+<!-- CHART -->
+<section class="chartband" id="chartband">
+  <div class="wrap chart-grid">
+    <div>
+      <p class="eyebrow">The numbers</p>
+      <h2>Twelve billion cans</h2>
+      <p>Annual unit sales have almost doubled in five years. The biggest single jump came in 2021, when sales rose by nearly two billion cans.</p>
+    </div>
+    <div class="chart-card chart">
+      <h3>Red Bull cans sold per year</h3>
+      <p class="sub">Billions of cans, as reported by the company. Rounded.</p>
+      <svg viewBox="0 0 640 310" role="img" aria-label="Bar chart of Red Bull cans sold per year in billions: 6.8 in 2018, 7.5 in 2019, 7.9 in 2020, 9.8 in 2021, 11.6 in 2022 and 12.1 in 2023.">
+        <g id="gridlines">
+          <line class="grid" x1="50" x2="630" y1="270" y2="270"/>
+          <line class="grid" x1="50" x2="630" y1="198.6" y2="198.6"/>
+          <line class="grid" x1="50" x2="630" y1="127.1" y2="127.1"/>
+          <line class="grid" x1="50" x2="630" y1="55.7" y2="55.7"/>
+          <text x="40" y="274" text-anchor="end">0</text>
+          <text x="40" y="203" text-anchor="end">4</text>
+          <text x="40" y="131" text-anchor="end">8</text>
+          <text x="40" y="60" text-anchor="end">12</text>
+        </g>
+        <g id="bars">
+          <rect class="bar" tabindex="0" x="69.5" y="148.6" width="56" height="121.4" rx="3"><title>2018: 6.8 billion cans</title></rect>
+          <rect class="bar" tabindex="0" x="164.5" y="136.1" width="56" height="133.9" rx="3"><title>2019: 7.5 billion cans</title></rect>
+          <rect class="bar" tabindex="0" x="259.5" y="128.9" width="56" height="141.1" rx="3"><title>2020: 7.9 billion cans</title></rect>
+          <rect class="bar" tabindex="0" x="354.5" y="95" width="56" height="175" rx="3"><title>2021: 9.8 billion cans</title></rect>
+          <rect class="bar" tabindex="0" x="449.5" y="62.9" width="56" height="207.1" rx="3"><title>2022: 11.6 billion cans</title></rect>
+          <rect class="bar" tabindex="0" x="544.5" y="53.9" width="56" height="216.1" rx="3"><title>2023: 12.1 billion cans</title></rect>
+        </g>
+        <text class="val" x="97.5" y="139" text-anchor="middle">6.8</text>
+        <text class="val" x="572.5" y="44" text-anchor="middle">12.1</text>
+        <g text-anchor="middle">
+          <text x="97.5" y="294">2018</text><text x="192.5" y="294">2019</text><text x="287.5" y="294">2020</text>
+          <text x="382.5" y="294">2021</text><text x="477.5" y="294">2022</text><text x="572.5" y="294">2023</text>
+        </g>
+      </svg>
+      <details>
+        <summary>View as table</summary>
+        <table>
+          <thead><tr><th>Year</th><th>Cans (billions)</th></tr></thead>
+          <tbody>
+            <tr><td>2018</td><td>6.8</td></tr><tr><td>2019</td><td>7.5</td></tr><tr><td>2020</td><td>7.9</td></tr>
+            <tr><td>2021</td><td>9.8</td></tr><tr><td>2022</td><td>11.6</td></tr><tr><td>2023</td><td>12.1</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- DIAGRAM -->
+<section class="loop" id="loop">
+  <div class="wrap">
+    <p class="eyebrow">The flywheel</p>
+    <h2>The can pays for the stunt</h2>
+    <p>Red Bull spends on athletes, events and its own media company instead of buying only ads. The content brings in fans, the fans buy cans, and the cans pay for the next event.</p>
+    <figure>
+      <svg viewBox="0 0 860 400" role="img" aria-label="Loop diagram. Cans fund athletes and events, events feed Red Bull Media House, media reaches fans, fans buy cans, which fund the next round.">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffc20e"/></marker>
+        </defs>
+        <g class="edge-group" fill="none" stroke="#ffc20e" stroke-width="3" marker-end="url(#arr)">
+          <path class="edge" pathLength="1" d="M300 70 H 560"/>
+          <path class="edge" pathLength="1" d="M700 110 V 290"/>
+          <path class="edge" pathLength="1" d="M560 330 H 300"/>
+          <path class="edge" pathLength="1" d="M160 290 V 110"/>
+        </g>
+        <g class="node" stroke="currentColor" stroke-width="1.5">
+          <rect x="40" y="40" width="260" height="70" fill="#2146a8" stroke="none"/>
+          <rect x="560" y="40" width="260" height="70" fill="#0d1d55"/>
+          <rect x="560" y="290" width="260" height="70" fill="#0d1d55"/>
+          <rect x="40" y="290" width="260" height="70" fill="#ec2a4d" stroke="none"/>
+        </g>
+        <g class="node" fill="#fff" text-anchor="middle" font-size="22">
+          <text x="170" y="82">Red Bull cans</text>
+          <text x="690" y="82">Athletes + events</text>
+          <text x="690" y="332">Red Bull Media House</text>
+          <text x="170" y="332">Fans</text>
+        </g>
+        <g text-anchor="middle">
+          <text class="elabel" x="430" y="58">fund</text>
+          <text class="elabel" x="770" y="206" text-anchor="start">film</text>
+          <text class="elabel" x="430" y="318">reach</text>
+          <text class="elabel" x="148" y="206" text-anchor="end">buy</text>
+        </g>
+      </svg>
+      <figcaption>One loop with four hops: cans fund athletes and events, those events become video through Red Bull Media House, the video reaches fans, and fans buy cans.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- STRATOS: altitude gauge -->
+<section class="pin stratos" id="stratos" aria-label="Red Bull Stratos altitude">
+  <div class="stage">
+    <div class="strat-grid">
+      <div class="gauge">
+        <svg viewBox="0 0 200 600" role="img" aria-label="Altitude gauge from 0 to 40 kilometres with markers for Mount Everest at 8,849 metres, airliner cruise at 10,700 metres, the Armstrong limit at 18,900 metres and the Stratos jump at 38,969 metres.">
+          <rect x="30" y="20" width="8" height="540" fill="#24356f"/>
+          <rect id="gFill" x="30" y="560" width="8" height="0" fill="#ec2a4d"/>
+          <g stroke="#c9d1e0" stroke-width="1.5">
+            <line x1="30" x2="52" y1="560" y2="560"/>
+            <line x1="30" x2="52" y1="440.5" y2="440.5"/>
+            <line x1="30" x2="52" y1="415.5" y2="415.5"/>
+            <line x1="30" x2="52" y1="304.9" y2="304.9"/>
+            <line x1="30" x2="52" y1="34" y2="34" stroke="#ffc20e"/>
+          </g>
+          <text x="60" y="564">Sea level</text>
+          <text x="60" y="450">Everest · 8,849 m</text>
+          <text x="60" y="414">Airliner · 10,700 m</text>
+          <text x="60" y="309">Armstrong limit · 18,900 m</text>
+          <text x="60" y="38" style="fill:#ffc20e">Jump · 38,969 m</text>
+          <polygon id="gMark" points="22,0 34,-7 34,7" fill="#fff" transform="translate(0,560)"/>
+        </svg>
+      </div>
+      <div class="strat-copy">
+        <p class="eyebrow">14 October 2012 · Roswell, New Mexico</p>
+        <div class="alt"><span id="altNum">0</span><small>metres</small></div>
+        <p class="strat-note" id="stratNote">The capsule is on the ground.</p>
+        <div class="strat-stats" id="stratStats">
+          <div><b>1,357 km/h</b><span>top speed, about Mach 1.25</span></div>
+          <div><b>4 min 19 s</b><span>of freefall</span></div>
+          <div><b>~9 min</b><span>total descent to the ground</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>This is an unofficial fan page made as a scroll animation demo. It is not affiliated with or endorsed by Red Bull GmbH. Red Bull and its logos are trademarks of their owners, and the can and wings here are original illustrations.</p>
+    <p>Figures are rounded from public company statements and news coverage and may differ from current numbers.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var clamp = function (v, a, b) { return Math.min(b, Math.max(a, v)); };
+  var lerp = function (a, b, t) { return a + (b - a) * t; };
+  var ease = function (t) { return t * t * (3 - 2 * t); };
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* ---- build wings ---- */
+  var feathers = [];
+  function buildWing(g, mirror) {
+    var n = 7;
+    for (var i = 0; i < n; i++) {
+      var len = 190 - i * 15, w = 26 - i * 1.5;
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', 'M0,0 C' + len * .3 + ',' + -w + ' ' + len * .8 + ',' + -w + ' ' + len + ',0 C' + len * .8 + ',' + w * .5 + ' ' + len * .3 + ',' + w * .7 + ' 0,0Z');
+      p.setAttribute('fill', '#f4f6fb');
+      p.setAttribute('stroke', '#c9d1e0');
+      p.setAttribute('stroke-width', '1.5');
+      g.appendChild(p);
+      feathers.push({ el: p, i: i, mirror: mirror });
+    }
+  }
+  var wingL = document.getElementById('wingL'), wingR = document.getElementById('wingR');
+  buildWing(wingL, true); buildWing(wingR, false);
+  wingL.setAttribute('transform', 'translate(250 285) scale(-1 1)');
+  wingR.setAttribute('transform', 'translate(350 285)');
+
+  var can = document.getElementById('can'), sun = document.getElementById('sun');
+  var hero = document.getElementById('hero');
+  var words = hero.querySelectorAll('.hero-words span');
+
+  function setHero(p) {
+    hero.style.setProperty('--p', p);
+    var open = ease(clamp((p - .12) / .6, 0, 1));
+    feathers.forEach(function (f) {
+      var closed = 78 + f.i * 3;
+      var opened = -72 + f.i * (104 / 6);
+      f.el.setAttribute('transform', 'rotate(' + lerp(closed, opened, open) + ')');
+      f.el.style.opacity = lerp(.0, 1, clamp(open * 3, 0, 1));
+    });
+    can.setAttribute('transform', 'translate(0 ' + (-ease(clamp(p / .8, 0, 1)) * 40) + ')');
+    sun.setAttribute('r', lerp(150, 235, ease(clamp(p / .9, 0, 1))));
+    for (var k = 0; k < words.length; k++) {
+      words[k].style.setProperty('--w', clamp((p - (.1 + k * .2)) / .18, 0, 1));
+    }
+  }
+
+  /* ---- generic pinned progress ---- */
+  function pinProgress(el) {
+    var r = el.getBoundingClientRect();
+    return clamp(-r.top / (r.height - window.innerHeight), 0, 1);
+  }
+  function viewProgress(el) {
+    var r = el.getBoundingClientRect(), vh = window.innerHeight;
+    return clamp((vh * .85 - r.top) / (vh * .6), 0, 1);
+  }
+
+  var timeline = document.getElementById('timeline'), track = document.getElementById('track');
+  var chartband = document.getElementById('chartband'), bars = document.querySelectorAll('.bar');
+  var loop = document.getElementById('loop'), edges = document.querySelectorAll('.edge');
+  var stratos = document.getElementById('stratos');
+  var altNum = document.getElementById('altNum'), gFill = document.getElementById('gFill'), gMark = document.getElementById('gMark');
+  var stats = document.getElementById('stratStats'), note = document.getElementById('stratNote');
+  var pageBar = document.documentElement;
+  var notes = [
+    [0, 'The capsule is on the ground.'],
+    [0.05, 'The balloon starts its two and a half hour climb.'],
+    [0.22, 'Past the height of an airliner. The air is already thin.'],
+    [0.40, 'Past the Armstrong limit, where water boils at body temperature.'],
+    [0.62, 'Almost there. The pressure suit is now the only thing keeping him alive.'],
+    [0.7, 'He steps off. 38,969 metres up.']
+  ];
+  var TOP = 38969;
+
+  function update() {
+    var doc = document.documentElement;
+    doc.style.setProperty('--page', clamp(window.scrollY / (doc.scrollHeight - window.innerHeight), 0, 1));
+
+    setHero(reduce ? .9 : pinProgress(hero));
+
+    var tp = reduce ? 1 : pinProgress(timeline);
+    timeline.style.setProperty('--p', tp);
+    var dist = Math.max(0, track.scrollWidth - window.innerWidth);
+    track.style.transform = 'translate3d(' + (-tp * dist) + 'px,0,0)';
+
+    var g = reduce ? 1 : viewProgress(chartband);
+    bars.forEach(function (b, i) {
+      b.style.setProperty('--g', ease(clamp(g * 1.6 - i * .12, 0, 1)));
+    });
+
+    var lg = reduce ? 1 : viewProgress(loop);
+    edges.forEach(function (e, i) {
+      e.style.setProperty('--g', clamp(lg * 4 - i, 0, 1));
+    });
+
+    var sp = reduce ? 1 : pinProgress(stratos);
+    var climb = ease(clamp(sp / .7, 0, 1));
+    var alt = TOP * climb;
+    altNum.textContent = Math.round(alt).toLocaleString('en-US');
+    var y = 560 - alt / 40000 * 540;
+    gMark.setAttribute('transform', 'translate(0,' + y + ')');
+    gFill.setAttribute('y', y);
+    gFill.setAttribute('height', 560 - y);
+    var s = clamp((sp - .68) / .2, 0, 1);
+    stats.style.setProperty('--s', reduce ? 1 : (.0 + s));
+    if (!reduce && sp < .01) stats.style.setProperty('--s', .15);
+    var msg = notes[0][1];
+    for (var i = 0; i < notes.length; i++) if (sp >= notes[i][0]) msg = notes[i][1];
+    note.textContent = msg;
+  }
+
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; update(); });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  update();
+})();
+</script>
+</body>
+</html>
