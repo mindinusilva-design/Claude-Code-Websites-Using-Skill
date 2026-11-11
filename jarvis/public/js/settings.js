@@ -56,7 +56,13 @@ export function createSettings(app) {
         granted ? h('span', { class: 'integration-state' }, h('span', { class: 'status-dot is-on' }), 'On') : h('button', { class: 'btn btn-sm', type: 'button', onclick: async () => { await Notification.requestPermission(); show('profile'); } }, 'Enable'),
       ));
     }
-    return [h('div', { class: 'group' }, h('h3', { text: 'About you' }), form), voiceGroup];
+    const layout = h('select', { 'aria-label': 'Interface style' },
+      h('option', { value: 'hud', selected: app.hud.layout() === 'hud' }, 'HUD (holographic control center)'),
+      h('option', { value: 'classic', selected: app.hud.layout() === 'classic' }, 'Classic (light or dark dashboard)'),
+    );
+    layout.addEventListener('change', () => { app.hud.setLayout(layout.value); app.refresh(); });
+    const interfaceGroup = h('div', { class: 'group' }, h('h3', { text: 'Interface' }), field('Style', layout, 'The HUD shows the live core, diagnostics and dock. Classic is a calmer dashboard with a light theme option.'));
+    return [h('div', { class: 'group' }, h('h3', { text: 'About you' }), form), interfaceGroup, voiceGroup];
   }
 
   // ------------------------------------------------------------- Voice

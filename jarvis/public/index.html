@@ -8,11 +8,12 @@
   <title>JARVIS</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/hud.css">
 </head>
 <body>
   <a class="skip-link" href="#input">Skip to message box</a>
 
-  <div class="app" id="app" data-view="chat">
+  <div class="app" id="app" data-view="chat" data-layout="hud">
     <header class="topbar">
       <div class="brand">
         <div class="orb" id="orb" data-state="idle" aria-hidden="true">
@@ -42,8 +43,29 @@
       </div>
     </header>
 
+    <!-- HUD interface: the frame around the conversation. Built and filled by js/hud.js. -->
+    <div class="hud-ruler" id="hud-ruler" aria-hidden="true"></div>
+    <section class="hud-col hud-left" id="hud-left" aria-label="Status"></section>
+    <section class="hud-core" id="hud-core" aria-label="JARVIS core">
+      <header class="hud-title">
+        <h2>J.A.R.V.I.S.</h2>
+        <p id="hud-status" aria-live="polite">Online</p>
+      </header>
+      <div class="hud-stage">
+        <div class="hud-wing hud-wing-left" id="hud-wing-left"></div>
+        <div class="hud-reactor" id="hud-reactor" data-state="idle"></div>
+        <div class="hud-wing hud-wing-right" id="hud-wing-right"></div>
+      </div>
+    </section>
+    <section class="hud-col hud-right" id="hud-right" aria-label="Environment"></section>
+
     <main class="layout">
       <section class="chat" aria-label="Conversation">
+        <header class="hud-console-head">
+          <span class="hud-label">Comms channel</span>
+          <canvas id="hud-wave" class="hud-wave" width="320" height="28" aria-hidden="true"></canvas>
+          <span class="hud-label" id="hud-latency">Link ready</span>
+        </header>
         <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
         <div class="suggestions" id="suggestions" aria-label="Suggestions"></div>
         <form class="composer" id="composer" autocomplete="off">
@@ -61,7 +83,12 @@
         <p class="composer-hint" id="composer-hint"></p>
       </section>
 
+      <div class="hud-scrim" id="hud-scrim" hidden></div>
       <aside class="dash" id="dash" aria-label="Dashboard">
+        <button class="icon-btn sheet-close" id="sheet-close" type="button" title="Close panel (Esc)">
+          <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-x"></use></svg>
+          <span class="sr-only">Close panel</span>
+        </button>
         <section class="panel" id="panel-today" aria-labelledby="h-today">
           <header class="panel-head">
             <h2 id="h-today"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-task"></use></svg>Today</h2>
@@ -103,6 +130,8 @@
         </section>
       </aside>
     </main>
+
+    <nav class="hud-dock" id="hud-dock" aria-label="Panels and controls"></nav>
 
     <nav class="tabbar" aria-label="Views">
       <button type="button" class="tab" data-view="chat" aria-pressed="true">

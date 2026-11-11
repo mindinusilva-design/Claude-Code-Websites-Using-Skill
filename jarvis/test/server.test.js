@@ -57,3 +57,16 @@ test('feedback updates the learning report', async () => {
   const { feedback } = await res.json();
   assert.equal(feedback.learned.alias, 'turn on the kitchen lights');
 });
+
+test('system metrics for the HUD', async () => {
+  const body = await (await fetch(`${base}/api/system`, { headers: auth })).json();
+  assert.ok(body.cpu >= 0 && body.cpu <= 100);
+  assert.ok(body.memory.usedPct > 0 && body.memory.usedPct <= 100);
+  assert.ok(body.jarvis.rssMb > 0);
+  assert.equal((await fetch(`${base}/api/system`)).status, 401);
+});
+
+test('fonts are served with the right type', async () => {
+  const res = await fetch(`${base}/fonts/orbitron-latin-700-normal.woff2`);
+  assert.equal(res.headers.get('content-type'), 'font/woff2');
+});

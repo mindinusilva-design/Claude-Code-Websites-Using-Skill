@@ -1,7 +1,7 @@
 // Tiny DOM helpers. Everything that comes from the server or the user is
 // inserted with textContent / attributes, never as HTML.
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const SVG_TAGS = new Set(['svg', 'use', 'g', 'rect', 'line', 'path', 'text', 'circle', 'title']);
+const SVG_TAGS = new Set(['svg', 'use', 'g', 'rect', 'line', 'path', 'text', 'tspan', 'circle', 'ellipse', 'polygon', 'polyline', 'title', 'defs', 'radialGradient', 'linearGradient', 'stop', 'filter', 'feGaussianBlur', 'feMerge', 'feMergeNode', 'clipPath', 'mask']);
 
 export function h(tag, props = {}, ...children) {
   const isSvg = SVG_TAGS.has(tag);

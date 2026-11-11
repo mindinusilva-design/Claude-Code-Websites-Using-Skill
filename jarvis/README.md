@@ -25,6 +25,19 @@ npm start
 
 Open http://localhost:3000. A simulated home with 13 devices is ready to try.
 
+## The interface
+
+JARVIS opens in a holographic HUD:
+
+- **Core.** An arc-reactor core in the center shows the time and how far the day has gone. It changes color and pulses with the voice while JARVIS listens and speaks.
+- **Wings.** One shows live system diagnostics: host CPU, memory, home load, learning and satisfaction. The other holds one-click commands.
+- **Left column.** The date, agenda meters, home load, AI and voice link status, scenes and web search.
+- **Right column.** Weather, host system stats, upcoming events and reminders, and news.
+- **Console.** The conversation sits under the core, with a live voice waveform.
+- **Dock.** The circular buttons open the full Today, Home, Weather, News and Learning panels, and control listening, voice and settings.
+
+Every value on screen is live. To switch to the calmer Classic dashboard, which also has a light theme, go to Settings, You, Interface.
+
 To enable Claude for open-ended conversation, set a key before starting, or
 add it later in Settings, Integrations:
 

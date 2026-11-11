@@ -127,6 +127,14 @@ tool list, the HTTP API and the dashboard. A new capability is added in one plac
   with a British voice where available, and dashboard panels for Today, Home,
   Weather, News and Learning. It works in light and dark themes, on phones,
   with keyboard navigation and screen readers, and with reduced motion.
+- **HUD interface** (`public/hud.css`, `public/js/hud.js`). The default
+  layout is a holographic control center. It has an SVG arc-reactor core with
+  a live clock, day progress and seconds ring, and it reacts to voice state and
+  audio level. Its diagnostic wings use real host metrics from
+  `GET /api/system`. Around it sit the agenda, home, uplink, weather, system,
+  upcoming and news widgets, with a circular dock that opens each full panel
+  as a sheet. The Rajdhani and Orbitron fonts are self-hosted under the OFL.
+  The Classic layout stays available in Settings.
 - **Voice pipeline** (`src/voice/`, `public/js/voice.js`). Speaking uses an
   ElevenLabs voice through `POST /api/voice/speak` when configured, and falls
   back to the browser's speech synthesis if not, or if a request fails. Short

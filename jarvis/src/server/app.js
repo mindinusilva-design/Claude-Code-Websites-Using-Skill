@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import os from 'node:os';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +11,7 @@ const DEFAULT_PUBLIC = resolve(HERE, '../../public');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
-  '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8',
+  '.webmanifest': 'application/manifest+json', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2',
 };
 const MAX_BODY = 100 * 1024;
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -82,6 +83,7 @@ export function createApp(jarvis, { publicDir = DEFAULT_PUBLIC, allowedHosts = [
   add('GET', '/api/dashboard', (req) => jarvis.dashboard(sanitizeSession(req.query.sessionId)));
   add('GET', '/api/history', (req) => ({ turns: jarvis.history({ sessionId: sanitizeSession(req.query.sessionId), limit: Math.min(100, Number(req.query.limit) || 30) }) }));
   add('GET', '/api/skills', () => ({ skills: jarvis.registry.list() }));
+  add('GET', '/api/system', () => systemSnapshot());
 
   add('POST', '/api/feedback', (req) => {
     const { turnId, rating, comment, correctedIntent, utterance, intent, sessionId } = req.body ?? {};
@@ -175,6 +177,35 @@ export function createApp(jarvis, { publicDir = DEFAULT_PUBLIC, allowedHosts = [
   // -- skill routes -----------------------------------------------------------
   for (const route of jarvis.registry.routes()) {
     add(route.method, route.path, (req) => route.handler(req, { ...jarvis.ctx, session: jarvis.contexts.get(sanitizeSession(req.query.sessionId)), actor: 'dashboard' }));
+  }
+
+  // -- host metrics for the HUD diagnostics ----------------------------------
+  const cpuTotals = () => os.cpus().reduce((acc, cpu) => {
+    const t = cpu.times;
+    acc.idle += t.idle;
+    acc.total += t.user + t.nice + t.sys + t.idle + t.irq;
+    return acc;
+  }, { idle: 0, total: 0 });
+  let cpuPrev = cpuTotals();
+  let cpuPercent = 0;
+  const cpuTimer = setInterval(() => {
+    const now = cpuTotals();
+    const total = now.total - cpuPrev.total;
+    if (total > 0) cpuPercent = Math.round((1 - (now.idle - cpuPrev.idle) / total) * 100);
+    cpuPrev = now;
+  }, 2000);
+  cpuTimer.unref?.();
+  function systemSnapshot() {
+    const total = os.totalmem();
+    const free = os.freemem();
+    return {
+      cpu: Math.max(0, Math.min(100, cpuPercent)),
+      cores: os.cpus().length,
+      memory: { usedPct: Math.round(((total - free) / total) * 100), totalGb: Number((total / 1024 ** 3).toFixed(1)) },
+      load: Number(os.loadavg()[0].toFixed(2)),
+      uptime: Math.round(os.uptime()),
+      jarvis: { rssMb: Math.round(process.memoryUsage().rss / 1024 ** 2), uptime: Math.round((Date.now() - startedAt) / 1000) },
+    };
   }
 
   // -- server-sent events -----------------------------------------------------
@@ -299,6 +330,7 @@ export function createApp(jarvis, { publicDir = DEFAULT_PUBLIC, allowedHosts = [
     },
     close() {
       clearInterval(heartbeat);
+      clearInterval(cpuTimer);
       jarvis.events.off('*', forward);
       for (const client of clients) client.end();
       clients.clear();

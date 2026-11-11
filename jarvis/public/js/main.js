@@ -5,6 +5,7 @@ import { Voice } from './voice.js';
 import { createChat } from './chat.js';
 import { renderDashboard, renderSuggestions, markStale } from './dashboard.js';
 import { createSettings } from './settings.js';
+import { createHud } from './hud.js';
 
 const VOICE_KEY = 'jarvis.voice';
 const THEME_KEY = 'jarvis.theme';
@@ -29,6 +30,7 @@ function setOrb(next, line = null) {
   const visual = next === 'transcribing' ? 'thinking' : next; // transcribing looks like thinking
   state.orb = visual;
   els.orb.dataset.state = visual;
+  app.hud?.setState(visual, els.status.textContent);
 }
 
 const app = {
@@ -52,8 +54,10 @@ const app = {
     app.chat.addUser(message, { voice: channel === 'voice' });
     app.chat.showTyping();
     setOrb('thinking');
+    const started = performance.now();
     try {
       const result = await api('/api/chat', { method: 'POST', body: { text: message, sessionId, channel } });
+      app.hud?.setLatency(Math.round(performance.now() - started));
       app.chat.addJarvis(result, { utterance: message });
       renderSuggestions(result.suggestions, app);
       setOrb('idle');
@@ -96,6 +100,7 @@ function applyVoicePrefs() {
   els.mic.title = app.voice.canListen ? `Speak to JARVIS (Alt+V)${app.voice.listenEngine === 'cloud' ? ', transcribed by ElevenLabs' : ''}` : 'Voice input is not supported in this browser. Connect ElevenLabs in Settings to enable it.';
   const speakOn = voicePrefs.speak && app.voice.canSpeak;
   els.voiceToggle.setAttribute('aria-pressed', String(speakOn));
+  app.hud?.setVoicePressed(speakOn);
   clear(els.voiceToggle).append(icon(speakOn ? 'speaker' : 'speaker-off', { size: 20 }), h('span', { class: 'sr-only', text: 'Read replies aloud' }));
   els.voiceToggle.hidden = !app.voice.canSpeak;
   if (!speakOn) app.voice.cancelSpeech();
@@ -143,6 +148,7 @@ async function loadDashboard() {
     state.online = true;
     renderChips(data);
     renderDashboard(data, app);
+    app.hud?.render(data);
     renderSuggestions(data.suggestions, app);
   } catch (error) {
     if (error.status === 0) { state.online = false; setOrb('offline'); }
@@ -188,7 +194,7 @@ async function start() {
     transcribe,
     onTranscript: (text) => { updateHint(); els.input.value = ''; app.send(text, { channel: 'voice' }); },
     onInterim: (text) => updateHint(`Hearing: ${text}`),
-    onLevel: (level) => els.orb.style.setProperty('--level', level.toFixed(3)),
+    onLevel: (level) => { els.orb.style.setProperty('--level', level.toFixed(3)); app.hud?.setLevel(level); },
     onWake: () => { if (voicePrefs.speak) app.voice.speak('Yes?'); },
     onVoicesChanged: () => {},
     onState: (next, line) => {
@@ -207,6 +213,7 @@ async function start() {
   });
   app.chat = createChat(app);
   app.settings = createSettings(app);
+  app.hud = createHud(app);
 
   const toggleMic = () => {
     if (app.voice.listening && !app.voice.handsFree) app.voice.stop();
