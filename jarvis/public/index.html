@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="JARVIS, a private personal assistant: voice and text chat, tasks, smart home, weather, news and continuous learning.">
+  <title>JARVIS</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#input">Skip to message box</a>
+
+  <div class="app" id="app" data-view="chat">
+    <header class="topbar">
+      <div class="brand">
+        <div class="orb" id="orb" data-state="idle" aria-hidden="true">
+          <span class="orb-ring orb-ring-a"></span>
+          <span class="orb-ring orb-ring-b"></span>
+          <span class="orb-core"></span>
+        </div>
+        <div class="brand-text">
+          <h1>JARVIS</h1>
+          <p id="status-line" aria-live="polite">Starting up</p>
+        </div>
+      </div>
+      <div class="chips" id="status-chips" aria-label="System status"></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="voice-toggle" type="button" aria-pressed="false" title="Read replies aloud">
+          <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-speaker-off"></use></svg>
+          <span class="sr-only">Read replies aloud</span>
+        </button>
+        <button class="icon-btn" id="theme-toggle" type="button" title="Switch between light and dark">
+          <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-moon"></use></svg>
+          <span class="sr-only">Switch between light and dark</span>
+        </button>
+        <button class="icon-btn" id="open-settings" type="button" title="Settings">
+          <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-settings"></use></svg>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="chat" aria-label="Conversation">
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+        <div class="suggestions" id="suggestions" aria-label="Suggestions"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <button class="mic-btn" id="mic" type="button" aria-pressed="false" title="Speak to JARVIS">
+            <svg class="icon" width="22" height="22" aria-hidden="true"><use href="#i-mic"></use></svg>
+            <span class="sr-only">Speak to JARVIS</span>
+          </button>
+          <label class="sr-only" for="input">Message JARVIS</label>
+          <input id="input" name="message" type="text" maxlength="2000" enterkeyhint="send" placeholder="Ask JARVIS anything">
+          <button class="send-btn" id="send" type="submit" title="Send">
+            <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-send"></use></svg>
+            <span class="sr-only">Send</span>
+          </button>
+        </form>
+        <p class="composer-hint" id="composer-hint"></p>
+      </section>
+
+      <aside class="dash" id="dash" aria-label="Dashboard">
+        <section class="panel" id="panel-today" aria-labelledby="h-today">
+          <header class="panel-head">
+            <h2 id="h-today"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-task"></use></svg>Today</h2>
+            <span class="panel-note" id="today-date"></span>
+          </header>
+          <div class="panel-body" id="today-body"><p class="empty">Loading your day</p></div>
+        </section>
+
+        <section class="panel" id="panel-home" aria-labelledby="h-home">
+          <header class="panel-head">
+            <h2 id="h-home"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-home"></use></svg>Home</h2>
+            <span class="panel-note" id="home-note"></span>
+          </header>
+          <div class="panel-body" id="home-body"><p class="empty">Finding your devices</p></div>
+        </section>
+
+        <section class="panel" id="panel-weather" aria-labelledby="h-weather">
+          <header class="panel-head">
+            <h2 id="h-weather"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-w-partly"></use></svg>Weather</h2>
+            <span class="panel-note" id="weather-note"></span>
+          </header>
+          <div class="panel-body" id="weather-body"><p class="empty">Checking the forecast</p></div>
+        </section>
+
+        <section class="panel" id="panel-news" aria-labelledby="h-news">
+          <header class="panel-head">
+            <h2 id="h-news"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-news"></use></svg>News</h2>
+            <span class="panel-note" id="news-note"></span>
+          </header>
+          <div class="panel-body" id="news-body"><p class="empty">Fetching headlines</p></div>
+        </section>
+
+        <section class="panel panel-wide" id="panel-insights" aria-labelledby="h-insights">
+          <header class="panel-head">
+            <h2 id="h-insights"><svg class="icon" width="18" height="18" aria-hidden="true"><use href="#i-chart"></use></svg>Learning</h2>
+            <span class="panel-note">How JARVIS is adapting to you</span>
+          </header>
+          <div class="panel-body" id="insights-body"><p class="empty">Gathering insights</p></div>
+        </section>
+      </aside>
+    </main>
+
+    <nav class="tabbar" aria-label="Views">
+      <button type="button" class="tab" data-view="chat" aria-pressed="true">
+        <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-chat"></use></svg>Chat
+      </button>
+      <button type="button" class="tab" data-view="dash" aria-pressed="false">
+        <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-chart"></use></svg>Dashboard
+      </button>
+    </nav>
+  </div>
+
+  <dialog class="dialog dialog-large" id="settings" aria-labelledby="settings-title">
+    <header class="dialog-head">
+      <h2 id="settings-title">Settings</h2>
+      <button class="icon-btn" type="button" data-close title="Close">
+        <svg class="icon" width="20" height="20" aria-hidden="true"><use href="#i-x"></use></svg>
+        <span class="sr-only">Close</span>
+      </button>
+    </header>
+    <div class="tabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" class="tab-btn" data-tab="profile" aria-selected="true">You</button>
+      <button type="button" role="tab" class="tab-btn" data-tab="privacy" aria-selected="false">Privacy</button>
+      <button type="button" role="tab" class="tab-btn" data-tab="integrations" aria-selected="false">Integrations</button>
+      <button type="button" role="tab" class="tab-btn" data-tab="skills" aria-selected="false">Skills</button>
+    </div>
+    <div class="dialog-body" id="settings-body"></div>
+  </dialog>
+
+  <dialog class="dialog" id="confirm" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">Are you sure?</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </div>
+  </dialog>
+
+  <dialog class="dialog" id="token-dialog" aria-labelledby="token-title">
+    <h2 id="token-title">Access token required</h2>
+    <p>This JARVIS is protected. Enter the access token that was set as JARVIS_API_TOKEN.</p>
+    <form id="token-form" class="stack">
+      <label class="field"><span>Access token</span><input id="token-input" type="password" autocomplete="current-password" required></label>
+      <div class="dialog-actions"><button type="submit" class="btn btn-primary">Unlock</button></div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <svg width="0" height="0" class="sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <g id="stroke-defaults" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></g>
+    </defs>
+    <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></g></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-7-7-1z"/></g></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></g></symbol>
+    <symbol id="i-speaker-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9.5l5 5"/><path d="M22 9.5l-5 5"/></g></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9"/><path d="M19 6h1"/><circle cx="16" cy="6" r="2.2"/><path d="M4 12h3"/><path d="M13 12h7"/><circle cx="10" cy="12" r="2.2"/><path d="M4 18h10"/><path d="M20 18h0"/><circle cx="17" cy="18" r="2.2"/></g></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></g></symbol>
+    <symbol id="i-light" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></g></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v5M15 3v5"/><path d="M7 8h10v3a5 5 0 0 1-10 0V8z"/><path d="M12 16v5"/></g></symbol>
+    <symbol id="i-fan" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.6"/><path d="M12 10.4c-.6-3.4.3-6 2.6-6.4 2.4-.3 3.3 3.2-1.2 6.9"/><path d="M13.4 12.8c3.2 1.2 5 3.3 4.1 5.5-.9 2.2-4.400.3-5.300-5.200"/><path d="M10.600 12.800c-2.700 2.200-5.400 2.700-6.800.8-1.500-1.900 1.100-4.500 6.600-2.600"/></g></symbol>
+    <symbol id="i-thermostat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a2 2 0 0 0-2 2v8.300a4 4 0 1 0 4 0V6a2 2 0 0 0-2-2z"/><path d="M12 10v7"/></g></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></g></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.600-1.700"/></g></symbol>
+    <symbol id="i-security" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.500-3 8.500-7 10-4-1.500-7-5.500-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></g></symbol>
+    <symbol id="i-speaker-tv" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></g></symbol>
+    <symbol id="i-blind" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16"/><path d="M6 4v13M18 4v13"/><path d="M6 8h12M6 12h12M6 16h12"/><path d="M12 17v4"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.500l4.500 4.500L19 7.500"/></g></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></g></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14"/><path d="M10 7V5h4v2"/><path d="M7 7l1 13h8l1-13"/></g></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4l2-2z"/><path d="M10 20a2 2 0 0 0 4 0"/></g></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></g></symbol>
+    <symbol id="i-thumb-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v9H4v-9h3z"/><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 4h5a2 2 0 0 1 2 2.300l-1.200 6a2 2 0 0 1-2 1.700H7"/></g></symbol>
+    <symbol id="i-thumb-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13V4H4v9h3z"/><path d="M7 13l4 7a2 2 0 0 0 3-2l-1-4h5a2 2 0 0 0 2-2.300l-1.200-6a2 2 0 0 0-2-1.700H7"/></g></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.500v.100"/></g></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h5"/></g></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3L12 4z"/><path d="M12 10v5"/><path d="M12 17.500v.100"/></g></symbol>
+    <symbol id="i-task" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 12.500l2 2 4-4.500"/></g></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-6h4v6"/></g></symbol>
+    <symbol id="i-news" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h11v14H7a2 2 0 0 1-2-2V5z"/><path d="M16 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5M8 16h3"/></g></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V8M17 20v-9"/></g></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></g></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.600 6.200A9.500 9.500 0 0 1 12 6c5 0 8.500 4 9.500 6a12 12 0 0 1-2.600 3.400"/><path d="M6.500 7.600A12 12 0 0 0 2.500 12c1 2 4.500 6 9.500 6 1.300 0 2.500-.300 3.600-.700"/><path d="M9.900 9.900a3 3 0 0 0 4.200 4.200"/></g></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4l1.800 4.700L17.500 10.500l-4.700 1.800L11 17l-1.800-4.700L4.500 10.500l4.700-1.800L11 4z"/><path d="M18 15l.800 2.200L21 18l-2.200.800L18 21l-.800-2.200L15 18l2.200-.800L18 15z"/></g></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.500-4"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.500 4"/><path d="M20 20v-4h-4"/></g></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></g></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></g></symbol>
+    <symbol id="i-w-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></g></symbol>
+    <symbol id="i-w-partly" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v1.500M3.500 8.500H5M4.600 5.100l1 1"/><path d="M10.500 6.200A3.500 3.500 0 0 0 6.300 10"/><path d="M9 19h8.500a3.500 3.500 0 0 0 .400-7 5 5 0 0 0-9.700 1.200A3 3 0 0 0 9 19z"/></g></symbol>
+    <symbol id="i-w-cloud" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .500-8A6 6 0 0 0 6 9.500 4.300 4.300 0 0 0 7 18z"/></g></symbol>
+    <symbol id="i-w-rain" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15h10a4 4 0 0 0 .500-8A6 6 0 0 0 6 6.500 4.300 4.300 0 0 0 7 15z"/><path d="M8.500 18l-1 2.500M12.500 18l-1 2.500M16.500 18l-1 2.500"/></g></symbol>
+    <symbol id="i-w-snow" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15h10a4 4 0 0 0 .500-8A6 6 0 0 0 6 6.500 4.300 4.300 0 0 0 7 15z"/><path d="M8 19v.100M12 20.500v.100M16 19v.100M10 17.500v.100M14 17.500v.100"/></g></symbol>
+    <symbol id="i-w-storm" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15h10a4 4 0 0 0 .500-8A6 6 0 0 0 6 6.500 4.300 4.300 0 0 0 7 15z"/><path d="M12.500 13l-2.500 4h3l-2 4"/></g></symbol>
+    <symbol id="i-w-fog" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M6 13h12M4 17h16"/></g></symbol>
+  </svg>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

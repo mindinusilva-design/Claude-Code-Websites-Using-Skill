@@ -115,7 +115,11 @@ export class Profile {
         ...described,
       });
     }
-    for (const item of extra) out.push({ score: 0.5, kind: 'context', ...item });
+    for (const item of extra) {
+      const dismissedAt = this.data.dismissedSuggestions[item.id];
+      if (dismissedAt && Date.now() - dismissedAt < 12 * 3600 * 1000) continue;
+      out.push({ score: 0.5, kind: 'context', ...item });
+    }
     return out.sort((a, b) => b.score - a.score).slice(0, limit);
   }
 
