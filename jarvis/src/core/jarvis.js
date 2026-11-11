@@ -13,6 +13,7 @@ import { SecurityManager } from './security.js';
 import { SkillRegistry } from './registry.js';
 import { IntegrationRegistry } from '../integrations/index.js';
 import { defineIntegrations } from '../integrations/catalog.js';
+import { createVoiceService } from '../voice/index.js';
 import { createSmartHomeSkill } from '../skills/smarthome/index.js';
 import { createTasksSkill } from '../skills/tasks/index.js';
 import { createWeatherSkill } from '../skills/weather/index.js';
@@ -99,6 +100,7 @@ export class Jarvis {
     this.security = new SecurityManager({ store: this.store, token: options.apiToken ?? env.JARVIS_API_TOKEN ?? null, logger: this.logger });
     this.integrations = defineIntegrations(new IntegrationRegistry({ store: this.store, security: this.security, env }));
     this.profile = new Profile({ store: this.store });
+    this.voice = options.voice ?? createVoiceService({ integrations: this.integrations, logger: this.logger });
     this.rules = new RuleEngine();
     this.classifier = new NaiveBayesClassifier();
     this.nlu = new NLU({ rules: this.rules, classifier: this.classifier });
@@ -119,6 +121,7 @@ export class Jarvis {
       security: this.security,
       integrations: this.integrations,
       scheduler: this.scheduler,
+      voice: this.voice,
       logger: this.logger,
       config: this.config,
       now: this.now,
@@ -172,6 +175,7 @@ export class Jarvis {
   /** Re-read integration settings after they change (new API key, new adapter). */
   async reconfigure() {
     if (!this.customLlm) this.llm = this.#createLanguageModel();
+    this.voice.reset?.();
     this.#refreshConfig();
     for (const skill of this.registry.skills.values()) {
       if (skill.reconfigure) await skill.reconfigure(this.ctx);
@@ -367,6 +371,7 @@ export class Jarvis {
       activity: this.profile.activityByHour(),
       interests: this.profile.topInterests(6),
       llm: { enabled: this.llm.enabled, model: this.llm.model ?? null },
+      voice: this.voice.status(),
       security: { authRequired: this.security.authRequired, encryption: this.encryption, incognito: Boolean(this.profile.get('incognito')) },
       integrations: this.integrations.list().map((i) => ({ id: i.id, name: i.name, category: i.category, configured: i.configured, builtIn: i.builtIn })),
       capabilities: this.registry.list(),
@@ -388,6 +393,9 @@ export class Jarvis {
       retentionDays: this.profile.get('retentionDays'),
       incognito: Boolean(this.profile.get('incognito')),
       thirdParties: this.integrations.list().filter((i) => i.configured).map((i) => ({ name: i.name, sends: describeSharing(i.id) })),
+      voice: this.voice.status().tts
+        ? 'Natural voice is on. The text of replies, and your recordings when you use cloud recognition, are sent to ElevenLabs.'
+        : 'Speech uses your browser. JARVIS sends no audio anywhere.',
       languageModel: this.llm.enabled
         ? 'On. Messages the built-in rules cannot handle are sent to the Anthropic API together with brief context (time, preferences, recent turns).'
         : 'Off. Nothing you say leaves this machine except the specific lookups you ask for (weather, news, search).',
@@ -465,6 +473,7 @@ function describeSharing(id) {
     case 'google-calendar': return 'events you create or read';
     case 'mastodon':
     case 'webhook': return 'posts you explicitly confirm';
+    case 'elevenlabs': return 'reply text to speak, and your recordings when cloud recognition is used';
     default: return 'requests you make';
   }
 }

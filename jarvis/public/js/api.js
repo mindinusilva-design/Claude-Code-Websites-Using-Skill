@@ -96,3 +96,36 @@ export function openEvents(handlers) {
   if (handlers.error) source.addEventListener('error', handlers.error);
   return source;
 }
+
+async function authorizedFetch(path, init, retry = true) {
+  const headers = { ...(init.headers ?? {}) };
+  if (memoryToken) headers.authorization = `Bearer ${memoryToken}`;
+  let response;
+  try {
+    response = await fetch(path, { ...init, headers });
+  } catch {
+    throw new ApiError(0, 'JARVIS is unreachable');
+  }
+  if (response.status === 401 && retry) {
+    setToken(await askForToken());
+    return authorizedFetch(path, init, false);
+  }
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try { message = (await response.json()).error ?? message; } catch { /* not JSON */ }
+    throw new ApiError(response.status, message);
+  }
+  return response;
+}
+
+/** Spoken audio for a reply, as a Blob ready for an <audio> element. */
+export async function fetchSpeech(text, voiceId = null) {
+  const response = await authorizedFetch('/api/voice/speak', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, voiceId }) });
+  return response.blob();
+}
+
+/** Send a recorded clip for transcription and return the text. */
+export async function transcribe(blob) {
+  const response = await authorizedFetch('/api/voice/transcribe', { method: 'POST', headers: { 'content-type': blob.type || 'audio/webm' }, body: blob });
+  return (await response.json()).text ?? '';
+}

@@ -200,7 +200,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .orb[data-state="listening"] .orb-ring-a { animation-duration: 2.400s; }
 .orb[data-state="thinking"] .orb-ring-a { animation-duration: 1.100s; }
 .orb[data-state="thinking"] .orb-ring-b { animation-duration: 0.900s; }
-.orb[data-state="speaking"] .orb-core { animation: orb-speak 0.520s ease-in-out infinite; }
+.orb { --level: 0; }
+.orb[data-state="speaking"] .orb-core { animation: none; transform: scale(calc(0.9 + var(--level) * 0.55)); transition: transform 0.07s linear; }
+.orb[data-state="listening"] .orb-core { animation: none; transform: scale(calc(0.92 + var(--level) * 0.6)); transition: transform 0.07s linear; }
+.orb[data-state="speaking"] .orb-ring-a, .orb[data-state="listening"] .orb-ring-a { opacity: calc(0.55 + var(--level)); }
 .orb[data-state="offline"] .orb-core { background: var(--text-muted); box-shadow: none; animation: none; }
 .orb[data-state="offline"] .orb-ring { opacity: 0.35; animation: none; }
 

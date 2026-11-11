@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { fetchJson, fetchText } from '../core/http.js';
 import { DEFAULT_MODEL } from '../core/nlu/llm.js';
+import { DEFAULT_VOICE_ID, DEFAULT_TTS_MODEL, DEFAULT_STT_MODEL, testElevenLabs } from '../voice/index.js';
 
 /** Every third-party service JARVIS can talk to, with its config and a live test. */
 export function defineIntegrations(registry) {
@@ -21,6 +22,20 @@ export function defineIntegrations(registry) {
         const model = await client.models.retrieve(config.model ?? DEFAULT_MODEL);
         return `Connected. Model: ${model.display_name ?? model.id}`;
       },
+    })
+    .define({
+      id: 'elevenlabs',
+      name: 'ElevenLabs (natural voice)',
+      category: 'Voice',
+      description: 'A natural, expressive voice for JARVIS, and cloud speech recognition so voice input works in every browser. Without it, JARVIS uses the browser\'s built-in speech.',
+      docs: 'https://elevenlabs.io/app/settings/api-keys',
+      fields: [
+        { key: 'apiKey', label: 'API key', env: 'ELEVENLABS_API_KEY', secret: true, required: true, placeholder: 'sk_...' },
+        { key: 'voiceId', label: 'Voice ID', env: 'ELEVENLABS_VOICE_ID', default: DEFAULT_VOICE_ID },
+        { key: 'model', label: 'Speech model', env: 'ELEVENLABS_MODEL', default: DEFAULT_TTS_MODEL },
+        { key: 'sttModel', label: 'Recognition model', env: 'ELEVENLABS_STT_MODEL', default: DEFAULT_STT_MODEL },
+      ],
+      test: testElevenLabs,
     })
     .define({
       id: 'open-meteo',

@@ -21,7 +21,7 @@ it, and what comes next. Paths are relative to the `jarvis/` folder.
                                        │
                                        ▼
                     Integrations registry (src/integrations/)
-          Home Assistant · Hue · Google Calendar · Mastodon · webhooks ·
+          Home Assistant · Hue · Google Calendar · Mastodon · webhooks · ElevenLabs ·
           Open-Meteo · Wikipedia · DuckDuckGo · RSS · Anthropic API
 ```
 
@@ -127,7 +127,18 @@ tool list, the HTTP API and the dashboard. A new capability is added in one plac
   with a British voice where available, and dashboard panels for Today, Home,
   Weather, News and Learning. It works in light and dark themes, on phones,
   with keyboard navigation and screen readers, and with reduced motion.
-- **Next.** Server-side speech for browsers without the Web Speech API; a mobile app shell.
+- **Voice pipeline** (`src/voice/`, `public/js/voice.js`). Speaking uses an
+  ElevenLabs voice through `POST /api/voice/speak` when configured, and falls
+  back to the browser's speech synthesis if not, or if a request fails. Short
+  phrases are cached. Listening uses browser recognition, or records the
+  microphone with automatic end-of-speech detection and transcribes it with
+  ElevenLabs Scribe through `POST /api/voice/transcribe`. The API key never
+  leaves the server. JARVIS speaks by default and always answers aloud when
+  spoken to. The orb follows the live audio level. Alt+V toggles the
+  microphone, and Esc interrupts speech.
+- **Acceptance.** `test/voice.test.js` covers the ElevenLabs request shapes,
+  caching, error messages and the voice routes.
+- **Next.** Streaming speech for lower latency; a mobile app shell.
 
 ### 2.7 Security and privacy
 

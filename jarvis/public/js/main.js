@@ -1,6 +1,6 @@
 // Bootstrap: wires chat, voice, dashboard, settings and live events together.
 import { h, icon, $, clear, toast, debounce } from './dom.js';
-import { api, withSession, openEvents, sessionId, getToken } from './api.js';
+import { api, withSession, openEvents, sessionId, getToken, fetchSpeech, transcribe } from './api.js';
 import { Voice } from './voice.js';
 import { createChat } from './chat.js';
 import { renderDashboard, renderSuggestions, markStale } from './dashboard.js';
@@ -16,16 +16,19 @@ const els = {
 
 const state = { busy: false, online: true, dashboard: null, orb: 'idle', greeting: 'Online' };
 
+// JARVIS talks by default; every choice here can be changed in Settings, You, Voice.
+const VOICE_DEFAULTS = { speak: true, rate: 1, handsFree: false, engine: 'auto', sttEngine: 'auto', voiceId: null, browserVoice: null };
 function loadVoicePrefs() {
-  try { return { speak: false, rate: 1, handsFree: false, ...JSON.parse(localStorage.getItem(VOICE_KEY) ?? '{}') }; } catch { return { speak: false, rate: 1, handsFree: false }; }
+  try { return { ...VOICE_DEFAULTS, ...JSON.parse(localStorage.getItem(VOICE_KEY) ?? '{}') }; } catch { return { ...VOICE_DEFAULTS }; }
 }
 let voicePrefs = loadVoicePrefs();
 
 function setOrb(next, line = null) {
-  state.orb = next;
-  els.orb.dataset.state = next;
-  const lines = { idle: state.greeting, listening: 'Listening', standby: 'Hands-free: say "Jarvis"', thinking: 'Working on it', speaking: 'Speaking', offline: 'Offline. Reconnecting' };
+  const lines = { idle: state.greeting, listening: 'Listening', standby: 'Hands-free: say "Jarvis"', thinking: 'Working on it', transcribing: 'Transcribing', speaking: 'Speaking', offline: 'Offline. Reconnecting' };
   els.status.textContent = line ?? lines[next] ?? state.greeting;
+  const visual = next === 'transcribing' ? 'thinking' : next; // transcribing looks like thinking
+  state.orb = visual;
+  els.orb.dataset.state = visual;
 }
 
 const app = {
@@ -88,15 +91,17 @@ const app = {
 };
 
 function applyVoicePrefs() {
+  app.voice.configure({ settings: { engine: voicePrefs.engine, sttEngine: voicePrefs.sttEngine, voiceId: voicePrefs.voiceId, browserVoice: voicePrefs.browserVoice, rate: voicePrefs.rate } });
+  els.mic.disabled = !app.voice.canListen;
+  els.mic.title = app.voice.canListen ? `Speak to JARVIS (Alt+V)${app.voice.listenEngine === 'cloud' ? ', transcribed by ElevenLabs' : ''}` : 'Voice input is not supported in this browser. Connect ElevenLabs in Settings to enable it.';
   const speakOn = voicePrefs.speak && app.voice.canSpeak;
   els.voiceToggle.setAttribute('aria-pressed', String(speakOn));
   clear(els.voiceToggle).append(icon(speakOn ? 'speaker' : 'speaker-off', { size: 20 }), h('span', { class: 'sr-only', text: 'Read replies aloud' }));
   els.voiceToggle.hidden = !app.voice.canSpeak;
-  app.voice.rate = voicePrefs.rate;
   if (!speakOn) app.voice.cancelSpeech();
   if (app.voice.canListen) {
     const wake = state.dashboard?.profile?.wakeWord ?? 'jarvis';
-    if (voicePrefs.handsFree !== app.voice.handsFree) app.voice.setHandsFree(voicePrefs.handsFree, wake);
+    if (voicePrefs.handsFree !== app.voice.handsFree && !app.voice.setHandsFree(voicePrefs.handsFree, wake)) voicePrefs.handsFree = false;
   }
   updateHint();
 }
@@ -104,9 +109,9 @@ function applyVoicePrefs() {
 function updateHint(live = null) {
   els.hint.classList.toggle('is-live', Boolean(live));
   if (live) els.hint.textContent = live;
-  else if (!app.voice.canListen) els.hint.textContent = 'Voice input is not supported in this browser. Typing works everywhere.';
+  else if (!app.voice.canListen) els.hint.textContent = 'Voice input needs Chrome, Edge or Safari, or ElevenLabs connected in Settings. Typing works everywhere.';
   else if (voicePrefs.handsFree) els.hint.textContent = 'Hands-free is on. Say "Jarvis" followed by what you need.';
-  else els.hint.textContent = 'Press the microphone to talk, or type. Try "help" to see everything I can do.';
+  else els.hint.textContent = `Press the microphone or Alt+V to talk${app.voice.listenEngine === 'cloud' ? ' (I stop listening when you pause)' : ''}. Esc stops me speaking.`;
 }
 
 function renderChips(data) {
@@ -114,6 +119,12 @@ function renderChips(data) {
   els.chips.append(data.llm.enabled
     ? h('span', { class: 'chip chip-accent', title: `Open-ended conversation is handled by ${data.llm.model}` }, icon('sparkle', { size: 14 }), h('span', { text: 'Claude connected' }))
     : h('button', { class: 'chip', type: 'button', title: 'Commands work offline. Connect Claude in Settings for open-ended conversation.', onclick: () => app.openSettings('integrations') }, icon('info', { size: 14 }), h('span', { text: 'Built-in understanding' })));
+  const natural = app.voice.speakEngine === 'cloud';
+  els.chips.append(h('button', {
+    class: `chip ${natural ? 'chip-accent' : ''}`, type: 'button',
+    title: natural ? 'JARVIS speaks with a natural ElevenLabs voice. Change it in Settings.' : 'JARVIS speaks with your browser voice. Connect ElevenLabs in Settings for a natural voice.',
+    onclick: () => app.openSettings('profile'),
+  }, icon('speaker', { size: 14 }), h('span', { text: natural ? 'Natural voice' : 'Browser voice' })));
   els.chips.append(h('span', { class: 'chip', title: `${data.security.encryption.algorithm}, key from ${data.security.encryption.keySource}` }, icon('lock', { size: 14 }), h('span', { text: 'Encrypted' })));
   if (data.security.incognito) els.chips.append(h('span', { class: 'chip chip-warm', title: 'Nothing is being saved or learned' }, icon('eye-off', { size: 14 }), h('span', { text: 'Incognito' })));
 }
@@ -123,6 +134,8 @@ async function loadDashboard() {
   try {
     const data = await api(withSession('/api/dashboard'));
     state.dashboard = data;
+    app.voice.configure({ server: { tts: Boolean(data.voice?.tts), stt: Boolean(data.voice?.stt) } });
+    applyVoicePrefs();
     const hour = new Date(data.now).getHours();
     const part = hour < 5 ? 'evening' : hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
     state.greeting = `Online. Good ${part}${data.profile.name ? `, ${data.profile.name}` : ''}`;
@@ -171,26 +184,35 @@ function initTheme() {
 async function start() {
   initTheme();
   app.voice = new Voice({
+    fetchSpeech,
+    transcribe,
     onTranscript: (text) => { updateHint(); els.input.value = ''; app.send(text, { channel: 'voice' }); },
     onInterim: (text) => updateHint(`Hearing: ${text}`),
+    onLevel: (level) => els.orb.style.setProperty('--level', level.toFixed(3)),
+    onWake: () => { if (voicePrefs.speak) app.voice.speak('Yes?'); },
+    onVoicesChanged: () => {},
     onState: (next, line) => {
       els.mic.setAttribute('aria-pressed', String(next === 'listening'));
       if (state.busy && next === 'idle') return;
       setOrb(next === 'standby' ? 'standby' : next, line);
       if (next === 'idle' || next === 'standby') updateHint();
-      if (next === 'listening') updateHint('Listening. Speak now.');
+      if (next === 'listening') updateHint(line ?? 'Listening. Speak now.');
+      if (next === 'transcribing') updateHint('Transcribing what you said');
     },
-    onError: (message) => { toast(message, { kind: 'error' }); voicePrefs.handsFree = false; updateHint(); setOrb('idle'); },
+    onError: (message, { soft = false } = {}) => {
+      toast(message, { kind: soft ? 'info' : 'error' });
+      if (!soft) { voicePrefs.handsFree = false; setOrb('idle'); }
+      updateHint();
+    },
   });
   app.chat = createChat(app);
   app.settings = createSettings(app);
 
-  els.mic.disabled = !app.voice.canListen;
-  if (!app.voice.canListen) els.mic.title = 'Voice input is not supported in this browser';
-  els.mic.addEventListener('click', () => {
+  const toggleMic = () => {
     if (app.voice.listening && !app.voice.handsFree) app.voice.stop();
-    else app.voice.listenOnce();
-  });
+    else app.voice.listenOnce(); // also interrupts JARVIS if it is speaking
+  };
+  els.mic.addEventListener('click', toggleMic);
   els.voiceToggle.addEventListener('click', () => app.setVoicePrefs({ speak: !voicePrefs.speak }));
   $('#open-settings').addEventListener('click', () => app.openSettings('profile'));
 
@@ -209,6 +231,16 @@ async function start() {
   }
 
   document.addEventListener('keydown', (event) => {
+    if (event.altKey && (event.code === 'KeyV') && !document.querySelector('dialog[open]')) {
+      event.preventDefault();
+      if (!els.mic.disabled) toggleMic();
+      return;
+    }
+    if (event.key === 'Escape' && app.voice.speaking) {
+      app.voice.cancelSpeech();
+      setOrb('idle');
+      return;
+    }
     if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !document.querySelector('dialog[open]')) {
       event.preventDefault();
       els.input.focus();

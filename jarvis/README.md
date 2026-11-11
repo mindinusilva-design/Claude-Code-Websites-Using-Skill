@@ -32,6 +32,26 @@ add it later in Settings, Integrations:
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+## Voice
+
+JARVIS speaks its replies and listens when you press the microphone or Alt+V.
+Esc stops it mid-sentence. Out of the box it uses the browser's built-in
+speech. For a natural voice, add an ElevenLabs key, here or in Settings,
+Integrations:
+
+```bash
+export ELEVENLABS_API_KEY=sk_...
+```
+
+With ElevenLabs connected:
+
+- Replies are spoken by an ElevenLabs voice. The default is George, a warm British voice. Pick any voice on your account in Settings, You, Voice.
+- Speech recognition works in every browser, including Firefox. JARVIS records while the microphone is lit and stops when you pause.
+- The API key stays on the server. The browser only receives audio.
+
+Hands-free mode ("Jarvis, …") uses the browser's recognition, so it needs
+Chrome, Edge or Safari.
+
 All options are listed in `.env.example`.
 
 ## Things to say
@@ -50,7 +70,7 @@ All options are listed in `.env.example`.
 | Command | What it does |
 |---|---|
 | `npm start` | Runs the server and dashboard |
-| `npm test` | Runs the 38 tests |
+| `npm test` | Runs the test suite |
 | `npm run demo` | Prints a scripted conversation, no browser needed |
 
 ## Connecting real devices and services

@@ -47,26 +47,8 @@ export function createSettings(app) {
       save.disabled = false;
     });
 
-    const prefs = app.voicePrefs();
-    const rate = h('input', { type: 'range', min: 70, max: 140, step: 5, value: String(Math.round(prefs.rate * 100)), 'aria-label': 'Speech rate' });
-    const paint = () => rate.style.setProperty('--fill', `${((rate.value - 70) / 70) * 100}%`);
-    paint();
-    rate.addEventListener('input', paint);
-    rate.addEventListener('change', () => { app.setVoicePrefs({ rate: Number(rate.value) / 100 }); app.voice.speak('This is how I sound at this speed.'); });
-
     const voiceGroup = h('div', { class: 'group' }, h('h3', { text: 'Voice' }));
-    if (app.voice.canSpeak) {
-      voiceGroup.append(
-        toggleRow('Read replies aloud', 'JARVIS speaks its answers on this device.', prefs.speak, (on) => app.setVoicePrefs({ speak: on })),
-        field('Speech rate', rate),
-      );
-    }
-    if (app.voice.canListen) {
-      voiceGroup.append(toggleRow('Hands-free', `Keep listening and act when you say "${profile.wakeWord ?? 'jarvis'}". Uses the microphone continuously.`, prefs.handsFree, (on) => app.setVoicePrefs({ handsFree: on })));
-      voiceGroup.append(h('div', { class: 'callout' }, icon('info'), h('span', { text: 'Speech recognition is provided by your browser. Some browsers send audio to their own speech service to transcribe it; JARVIS only receives the resulting text.' })));
-    } else {
-      voiceGroup.append(h('div', { class: 'callout' }, icon('info'), h('span', { text: 'This browser does not support speech recognition. You can still type, and replies can be read aloud. Chrome, Edge and Safari support voice input.' })));
-    }
+    await voiceSection(voiceGroup, profile);
     if ('Notification' in window) {
       const granted = Notification.permission === 'granted';
       voiceGroup.append(h('div', { class: 'toggle-row' },
@@ -77,6 +59,72 @@ export function createSettings(app) {
     return [h('div', { class: 'group' }, h('h3', { text: 'About you' }), form), voiceGroup];
   }
 
+  // ------------------------------------------------------------- Voice
+  async function voiceSection(group, profile) {
+    const prefs = app.voicePrefs();
+    const v = app.voice;
+    let server = { tts: null, stt: null, voices: [], error: null };
+    try { server = await api('/api/voice'); } catch { /* the browser voice still works */ }
+
+    group.append(toggleRow('Speak replies', 'JARVIS reads its answers aloud. It always answers out loud when you speak to it.', prefs.speak, (on) => app.setVoicePrefs({ speak: on })));
+
+    // Which voice engine.
+    const engine = h('select', { 'aria-label': 'Voice engine' },
+      h('option', { value: 'cloud', disabled: !server.tts, selected: prefs.engine !== 'browser' && Boolean(server.tts) }, server.tts ? 'Natural voice (ElevenLabs)' : 'Natural voice (connect ElevenLabs first)'),
+      h('option', { value: 'browser', selected: prefs.engine === 'browser' || !server.tts, disabled: !v.canBrowserSpeak }, 'Browser voice (offline, built in)'),
+    );
+    const voicePicker = h('div', { class: 'stack' });
+    const renderPicker = () => {
+      clear(voicePicker);
+      const useCloud = engine.value === 'cloud';
+      const select = h('select', { 'aria-label': 'Voice' });
+      if (useCloud) {
+        const current = app.voicePrefs().voiceId ?? server.tts?.voiceId;
+        const voices = server.voices.length ? server.voices : [{ id: server.tts?.voiceId, name: 'Default voice', description: '' }];
+        for (const voice of voices) select.append(h('option', { value: voice.id, selected: voice.id === current }, voice.description ? `${voice.name} (${voice.description})` : voice.name));
+        select.addEventListener('change', () => app.setVoicePrefs({ voiceId: select.value }));
+      } else {
+        const current = app.voicePrefs().browserVoice;
+        select.append(h('option', { value: '' }, 'Automatic (prefers a British voice)'));
+        for (const voice of v.browserVoices()) select.append(h('option', { value: voice.voiceURI, selected: voice.voiceURI === current }, `${voice.name} (${voice.lang})`));
+        select.addEventListener('change', () => app.setVoicePrefs({ browserVoice: select.value || null }));
+      }
+      const preview = h('button', { class: 'btn btn-sm', type: 'button', onclick: () => v.speak(`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}${profile.name ? `, ${profile.name}` : ''}. All systems are online and ready when you are.`) }, icon('speaker', { size: 15 }), 'Preview');
+      voicePicker.append(h('label', { class: 'field' }, h('span', { text: 'Voice' }), h('div', { class: 'quick-add' }, select, preview)));
+      if (useCloud && server.error) voicePicker.append(h('small', { class: 'field', text: `Could not load your ElevenLabs voices (${server.error}). The configured voice is used.` }));
+    };
+    engine.addEventListener('change', () => { app.setVoicePrefs({ engine: engine.value }); renderPicker(); });
+    renderPicker();
+    group.append(field('Voice engine', engine, server.tts ? 'The natural voice sends reply text to ElevenLabs. The browser voice keeps everything on this device.' : 'Add an ElevenLabs API key under Integrations for a natural, expressive voice.'), voicePicker);
+
+    const rate = h('input', { type: 'range', min: 70, max: 140, step: 5, value: String(Math.round(prefs.rate * 100)), 'aria-label': 'Speech rate' });
+    const paint = () => rate.style.setProperty('--fill', `${((rate.value - 70) / 70) * 100}%`);
+    paint();
+    rate.addEventListener('input', paint);
+    rate.addEventListener('change', () => { app.setVoicePrefs({ rate: Number(rate.value) / 100 }); v.speak('This is how I sound at this speed.'); });
+    group.append(field('Speech rate', rate));
+
+    // How JARVIS listens.
+    const hasBrowserStt = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const stt = h('select', { 'aria-label': 'Speech recognition' },
+      h('option', { value: 'browser', disabled: !hasBrowserStt, selected: prefs.sttEngine !== 'cloud' && hasBrowserStt }, hasBrowserStt ? 'Browser recognition (supports hands-free)' : 'Browser recognition (not supported here)'),
+      h('option', { value: 'cloud', disabled: !(server.stt && v.canRecord), selected: prefs.sttEngine === 'cloud' || (!hasBrowserStt && Boolean(server.stt)) }, server.stt ? 'ElevenLabs Scribe (works in every browser)' : 'ElevenLabs Scribe (connect ElevenLabs first)'),
+    );
+    stt.addEventListener('change', () => { app.setVoicePrefs({ sttEngine: stt.value, handsFree: stt.value === 'cloud' ? false : app.voicePrefs().handsFree }); show('profile'); });
+    group.append(field('Speech recognition', stt, 'Shortcut: Alt+V starts and stops listening. Esc stops JARVIS speaking.'));
+
+    if (v.canHandsFree) {
+      group.append(toggleRow('Hands-free', `Keep listening and act when you say "${profile.wakeWord ?? 'jarvis'}". Uses the microphone continuously.`, prefs.handsFree, (on) => app.setVoicePrefs({ handsFree: on })));
+    }
+    group.append(h('div', { class: 'callout' }, icon('info'), h('span', {
+      text: v.listenEngine === 'cloud'
+        ? 'JARVIS records only while the microphone button is lit and stops when you pause. The clip goes to ElevenLabs for transcription and is not stored by JARVIS.'
+        : v.listenEngine === 'browser'
+          ? 'Browser recognition is provided by your browser. Some browsers send audio to their own speech service; JARVIS only receives the text.'
+          : 'This browser has no speech recognition. Connect ElevenLabs under Integrations to talk to JARVIS here.',
+    })));
+  }
+
   // ------------------------------------------------------------- Privacy
   async function privacyTab() {
     const [report, audit, { profile }] = await Promise.all([api('/api/privacy'), api('/api/privacy/audit?limit=15'), api('/api/profile')]);
@@ -85,6 +133,7 @@ export function createSettings(app) {
     add('Where it lives', report.storage);
     add('Encryption', `${report.encryption.algorithm}, key from ${report.encryption.keySource}`);
     add('Language model', report.languageModel);
+    if (report.voice) add('Voice', report.voice);
     add('What is stored', Object.entries(report.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ') || 'Nothing yet');
     if (report.thirdParties.length) add('Outside services', report.thirdParties.map((t) => `${t.name} (${t.sends})`).join('; '));
 

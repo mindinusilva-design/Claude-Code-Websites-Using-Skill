@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VERSION } from '../core/jarvis.js';
+import { AUDIO_TYPES, MAX_AUDIO_BYTES, VoiceError } from '../voice/index.js';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const DEFAULT_PUBLIC = resolve(HERE, '../../public');
@@ -32,17 +33,22 @@ function compile(path) {
   return { regex: new RegExp(`^${source}$`), keys };
 }
 
-async function readBody(req) {
+/** JSON by default; routes with `audio: true` accept a raw audio upload instead. */
+async function readBody(req, { audio = false } = {}) {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return null;
+  const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+  if (audio && !AUDIO_TYPES.has(type)) throw new HttpError(415, `content-type must be one of ${[...AUDIO_TYPES].join(', ')}`);
+  const limit = audio ? MAX_AUDIO_BYTES : MAX_BODY;
+  if (Number(req.headers['content-length'] ?? 0) > limit) throw new HttpError(413, 'request body too large');
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new HttpError(413, 'request body too large');
+    if (size > limit) throw new HttpError(413, 'request body too large');
     chunks.push(chunk);
   }
+  if (audio) return { audio: Buffer.concat(chunks), contentType: type };
   if (!size) return null;
-  const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
   if (type !== 'application/json') throw new HttpError(415, 'content-type must be application/json');
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
@@ -118,6 +124,39 @@ export function createApp(jarvis, { publicDir = DEFAULT_PUBLIC, allowedHosts = [
     if (req.headers['x-confirm'] !== 'delete') throw new HttpError(400, 'send the header "x-confirm: delete" to confirm');
     return jarvis.forget(scope);
   });
+
+  // -- voice ------------------------------------------------------------------
+  add('GET', '/api/voice', async () => {
+    const status = jarvis.voice.status();
+    let voices = [];
+    let error = null;
+    if (status.tts) {
+      try { voices = await jarvis.voice.voices(); } catch (e) { error = e.message; }
+    }
+    return { ...status, voices, error };
+  });
+  add('POST', '/api/voice/speak', async (req) => {
+    const text = req.body?.text;
+    if (typeof text !== 'string' || !text.trim()) throw new HttpError(400, 'text is required');
+    if (text.length > 5000) throw new HttpError(400, 'text is too long');
+    try {
+      const { audio, contentType, cached } = await jarvis.voice.speak(text, { voiceId: typeof req.body.voiceId === 'string' ? req.body.voiceId : null });
+      return { status: 200, headers: { 'content-type': contentType, 'x-jarvis-cache': cached ? 'hit' : 'miss' }, raw: audio };
+    } catch (error) {
+      if (error instanceof VoiceError) throw new HttpError(error.status, error.message);
+      throw error;
+    }
+  });
+  add('POST', '/api/voice/transcribe', async (req) => {
+    try {
+      const result = await jarvis.voice.transcribe(req.body.audio, req.body.contentType);
+      jarvis.security.audit('voice.transcribed', { bytes: req.body.audio.length }, 'dashboard');
+      return result;
+    } catch (error) {
+      if (error instanceof VoiceError) throw new HttpError(error.status, error.message);
+      throw error;
+    }
+  }, { audio: true });
 
   add('GET', '/api/integrations', () => ({ integrations: jarvis.integrations.list() }));
   add('PUT', '/api/integrations/:id', async (req) => {
@@ -230,10 +269,11 @@ export function createApp(jarvis, { publicDir = DEFAULT_PUBLIC, allowedHosts = [
       }
       const match = route.regex.exec(pathname);
       const params = Object.fromEntries(route.keys.map((key, i) => [key, decodeURIComponent(match[i + 1])]));
-      const body = await readBody(req);
+      const body = await readBody(req, { audio: Boolean(route.audio) });
       const result = await route.handler({ params, query: Object.fromEntries(url.searchParams), body, headers: req.headers });
       if (result && typeof result === 'object' && 'status' in result && ('body' in result || 'raw' in result)) {
-        return 'raw' in result ? send(res, result.status, String(result.raw), result.headers ?? {}) : send(res, result.status, result.body, result.headers ?? {});
+        if ('raw' in result) return send(res, result.status, Buffer.isBuffer(result.raw) ? result.raw : String(result.raw), result.headers ?? {});
+        return send(res, result.status, result.body, result.headers ?? {});
       }
       return send(res, 200, result ?? { ok: true });
     } catch (error) {
