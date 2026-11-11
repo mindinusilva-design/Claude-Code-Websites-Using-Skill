@@ -11,9 +11,13 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test \"test/*.test.js\"",
-    "demo": "node scripts/demo.js"
+    "demo": "node scripts/demo.js",
+    "build:standalone": "node scripts/build-standalone.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
   }
 }

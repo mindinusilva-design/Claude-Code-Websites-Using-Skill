@@ -118,6 +118,12 @@ async function authorizedFetch(path, init, retry = true) {
   return response;
 }
 
+/** A protected file (export, calendar feed) as a Blob, token kept in a header. */
+export async function apiBlob(path) {
+  const response = await authorizedFetch(path, { method: 'GET' });
+  return response.blob();
+}
+
 /** Spoken audio for a reply, as a Blob ready for an <audio> element. */
 export async function fetchSpeech(text, voiceId = null) {
   const response = await authorizedFetch('/api/voice/speak', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, voiceId }) });

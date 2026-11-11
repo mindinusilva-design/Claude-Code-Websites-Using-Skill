@@ -1,6 +1,6 @@
 // Bootstrap: wires chat, voice, dashboard, settings and live events together.
 import { h, icon, $, clear, toast, debounce } from './dom.js';
-import { api, withSession, openEvents, sessionId, getToken, fetchSpeech, transcribe } from './api.js';
+import { api, apiBlob, withSession, openEvents, sessionId, fetchSpeech, transcribe } from './api.js';
 import { Voice } from './voice.js';
 import { createChat } from './chat.js';
 import { renderDashboard, renderSuggestions, markStale } from './dashboard.js';
@@ -81,10 +81,7 @@ const app = {
   /** Download a protected file (keeps the access token in a header, not the URL). */
   async download(url, filename) {
     try {
-      const headers = getToken() ? { authorization: `Bearer ${getToken()}` } : {};
-      const response = await fetch(url, { headers });
-      if (!response.ok) throw new Error(`Download failed (${response.status})`);
-      const blobUrl = URL.createObjectURL(await response.blob());
+      const blobUrl = URL.createObjectURL(await apiBlob(url));
       const link = h('a', { href: blobUrl, download: filename });
       document.body.append(link);
       link.click();
@@ -130,7 +127,10 @@ function renderChips(data) {
     title: natural ? 'JARVIS speaks with a natural ElevenLabs voice. Change it in Settings.' : 'JARVIS speaks with your browser voice. Connect ElevenLabs in Settings for a natural voice.',
     onclick: () => app.openSettings('profile'),
   }, icon('speaker', { size: 14 }), h('span', { text: natural ? 'Natural voice' : 'Browser voice' })));
-  els.chips.append(h('span', { class: 'chip', title: `${data.security.encryption.algorithm}, key from ${data.security.encryption.keySource}` }, icon('lock', { size: 14 }), h('span', { text: 'Encrypted' })));
+  const enc = data.security.encryption;
+  els.chips.append(enc.enabled
+    ? h('span', { class: 'chip', title: `${enc.algorithm}, key from ${enc.keySource}` }, icon('lock', { size: 14 }), h('span', { text: 'Encrypted' }))
+    : h('button', { class: 'chip chip-warm', type: 'button', title: enc.hint ?? 'Data is stored without encryption', onclick: () => app.openSettings('privacy') }, icon('unlock', { size: 14 }), h('span', { text: 'Not encrypted' })));
   if (data.security.incognito) els.chips.append(h('span', { class: 'chip chip-warm', title: 'Nothing is being saved or learned' }, icon('eye-off', { size: 14 }), h('span', { text: 'Incognito' })));
 }
 

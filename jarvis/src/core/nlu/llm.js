@@ -51,7 +51,9 @@ export function createLanguageModel({
   if (!apiKey && !client) {
     return { enabled: false, model: null, reason: 'ANTHROPIC_API_KEY is not set' };
   }
-  const anthropic = client ?? new Anthropic({ apiKey });
+  // In the standalone page the key belongs to the person using it and stays on their device.
+  const inBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
+  const anthropic = client ?? new Anthropic({ apiKey, dangerouslyAllowBrowser: inBrowser });
 
   function toRunnable(tools, calls) {
     return tools.map((tool) =>

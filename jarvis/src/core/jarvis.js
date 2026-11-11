@@ -92,8 +92,9 @@ export class Jarvis {
       newsFeeds: [],
       startScheduler: options.startScheduler ?? true,
     };
-    const { secret, source } = resolveSecret({ dataDir: this.config.dataDir, env, explicit: options.secret });
-    this.encryption = { enabled: true, algorithm: 'AES-256-GCM', keySource: source };
+    const { secret, source } = options.store ? { secret: null, source: 'host' } : resolveSecret({ dataDir: this.config.dataDir, env, explicit: options.secret });
+    this.encryption = options.encryption ?? { enabled: true, algorithm: 'AES-256-GCM', keySource: source };
+    this.storageLabel = options.storageLabel ?? null;
     this.store = options.store ?? new Store({ dir: this.config.dataDir, secret, encrypted: 'all' });
 
     this.events = new EventBus();
@@ -389,7 +390,7 @@ export class Jarvis {
       counts: { conversations: count('conversations'), tasks: count('tasks'), reminders: count('reminders'), events: count('events'), 'feedback entries': count('feedback'), devices: count('devices'), 'audit entries': count('audit') },
       learned: { phrases: this.learning.report().aliasCount, samples: this.learning.report().samples, interests: this.profile.topInterests(5).map((i) => i.topic) },
       encryption: this.encryption,
-      storage: this.config.dataDir ? `Local files in ${this.config.dataDir}` : 'In memory only (nothing is written to disk)',
+      storage: this.storageLabel ?? (this.config.dataDir ? `Local files in ${this.config.dataDir}` : 'In memory only (nothing is written to disk)'),
       retentionDays: this.profile.get('retentionDays'),
       incognito: Boolean(this.profile.get('incognito')),
       thirdParties: this.integrations.list().filter((i) => i.configured).map((i) => ({ name: i.name, sends: describeSharing(i.id) })),

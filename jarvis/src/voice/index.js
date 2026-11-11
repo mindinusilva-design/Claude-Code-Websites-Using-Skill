@@ -85,8 +85,9 @@ export function createVoiceService({ integrations, logger = console }) {
         }),
       });
       if (!response.ok) throw await failure(response, 'speech');
-      const audio = Buffer.from(await response.arrayBuffer());
-      if (clipped.length <= 300) {
+      const bytes = await response.arrayBuffer();
+      const audio = typeof Buffer !== 'undefined' ? Buffer.from(bytes) : new Blob([bytes], { type: 'audio/mpeg' });
+      if (clipped.length <= 300) { // short, frequently repeated phrases
         cache.set(key, audio);
         if (cache.size > 40) cache.delete(cache.keys().next().value);
       }

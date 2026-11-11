@@ -18,7 +18,7 @@ export function defineIntegrations(registry) {
         { key: 'effort', label: 'Effort (low, medium, high)', env: 'JARVIS_LLM_EFFORT', default: 'low' },
       ],
       test: async (config) => {
-        const client = new Anthropic({ apiKey: config.apiKey });
+        const client = new Anthropic({ apiKey: config.apiKey, dangerouslyAllowBrowser: typeof window !== 'undefined' });
         const model = await client.models.retrieve(config.model ?? DEFAULT_MODEL);
         return `Connected. Model: ${model.display_name ?? model.id}`;
       },

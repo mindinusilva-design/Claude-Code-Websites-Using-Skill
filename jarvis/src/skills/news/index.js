@@ -1,4 +1,4 @@
-import { fetchText, decodeEntities } from '../../core/http.js';
+import { fetchText, fetchJson, decodeEntities } from '../../core/http.js';
 
 const GOOGLE_TOP = 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en';
 const GOOGLE_SEARCH = (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
@@ -56,7 +56,37 @@ export function createNewsSkill() {
     return items;
   }
 
+  async function hackerNews(topic) {
+    const key = `hn:${topic ?? ''}`;
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.at < 15 * 60_000) return hit.items;
+    const url = topic
+      ? `https://hn.algolia.com/api/v1/search?tags=story&query=${encodeURIComponent(topic)}`
+      : 'https://hn.algolia.com/api/v1/search?tags=front_page';
+    const data = await fetchJson(url);
+    const items = (data.hits ?? []).filter((x) => x.title).map((x) => ({
+      title: decodeEntities(x.title), link: x.url || `https://news.ycombinator.com/item?id=${x.objectID}`,
+      source: 'Hacker News', published: x.created_at ?? null,
+    }));
+    cache.set(key, { at: Date.now(), items });
+    return items;
+  }
+
   async function headlines(topic, ctx, limit = 6) {
+    try {
+      return await headlinesFromFeeds(topic, ctx, limit);
+    } catch (error) {
+      // Feeds can be unreachable (offline, or blocked by CORS in the standalone page).
+      try {
+        const now = ctx.now();
+        return (await hackerNews(topic)).slice(0, limit).map((item) => ({ ...item, ago: timeAgo(item.published, now) }));
+      } catch {
+        throw error;
+      }
+    }
+  }
+
+  async function headlinesFromFeeds(topic, ctx, limit) {
     const custom = (ctx.config.newsFeeds ?? []).filter(Boolean);
     let items;
     if (topic) items = await fetchFeed(GOOGLE_SEARCH(topic));

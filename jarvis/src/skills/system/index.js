@@ -17,7 +17,7 @@ export function createSystemSkill() {
     const singular = (k) => k.replace(/ies$/, 'y').replace(/s$/, '');
     const counts = Object.entries(report.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${n === 1 ? singular(k) : k}`);
     return {
-      text: `Here's what I hold: ${facts.join(', ')}. I've stored ${counts.length ? counts.join(', ') : 'nothing else yet'}. ${report.encryption.enabled ? 'Sensitive data is encrypted on this machine with AES-256.' : 'Encryption is off because no JARVIS_SECRET is set.'} Conversations are kept for ${p.retentionDays} days${p.incognito ? ', and incognito mode is on so nothing new is being saved' : ''}. You can say "export my data" or "forget everything" at any time.`,
+      text: `Here's what I hold: ${facts.join(', ')}. I've stored ${counts.length ? counts.join(', ') : 'nothing else yet'}. ${report.encryption.enabled ? 'Your data is encrypted with AES-256.' : `Your data is not encrypted${report.encryption.hint ? ` (${report.encryption.hint})` : ''}.`} Conversations are kept for ${p.retentionDays} days${p.incognito ? ', and incognito mode is on so nothing new is being saved' : ''}. You can say "export my data" or "forget everything" at any time.`,
       cards: [{ type: 'privacy', title: 'Your data', report }],
     };
   }

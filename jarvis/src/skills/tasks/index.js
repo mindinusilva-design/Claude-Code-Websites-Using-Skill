@@ -237,7 +237,7 @@ export function createTasksSkill() {
     const start = when.date;
     const end = new Date(start.getTime() + (durationMs ?? 60 * 60_000));
     const clashes = (await listEvents({ from: start, to: end })).filter((e) => new Date(e.start) < end && new Date(e.end) > start);
-    const calendar = calendars.find((c) => c.id === ctx.config.calendarAdapter) ?? local;
+    const calendar = calendars.find((c) => c.id === 'google') ?? local;
     let event;
     try {
       event = await calendar.create({ title, start: start.toISOString(), end: end.toISOString(), location: slots.location ?? null });
@@ -311,7 +311,7 @@ export function createTasksSkill() {
       reminders = ctx.store.collection('reminders');
       local = createLocalCalendar({ store: ctx.store });
       calendars = [local];
-      if (ctx.config.calendarAdapter === 'google') {
+      if (ctx.config.calendarAdapter === 'google' || ctx.integrations?.isConfigured('google-calendar')) {
         try {
           calendars.push(createGoogleCalendar(ctx.integrations.config('google-calendar')));
         } catch (error) {

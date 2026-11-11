@@ -5,7 +5,8 @@ export async function fetchWithTimeout(url, { timeoutMs = 8000, headers = {}, ..
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, headers: { 'user-agent': USER_AGENT, ...headers }, signal: controller.signal });
+    const base = typeof window === 'undefined' ? { 'user-agent': USER_AGENT } : {};
+    return await fetch(url, { ...init, headers: { ...base, ...headers }, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }

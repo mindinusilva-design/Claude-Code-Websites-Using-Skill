@@ -108,7 +108,8 @@ export function createSearchSkill() {
         title = extractTitle(html);
         text = htmlToText(html.slice(0, 2_000_000));
       } catch (error) {
-        return { text: `I couldn't load that page (${error.message}).` };
+        const hint = typeof window !== 'undefined' ? ' Many sites block direct access from a web page. Paste the article text after "summarize" instead.' : '';
+        return { text: `I couldn't load that page (${error.message}).${hint}` };
       }
     }
     if (text.length < 200) return { text: url ? "I loaded the page but couldn't find enough readable text to summarize." : 'Give me a link or paste the text you want summarized.' };

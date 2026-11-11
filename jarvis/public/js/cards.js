@@ -124,7 +124,7 @@ export function renderCard(card, app) {
       add('History', `Kept for ${r.retentionDays} days${r.incognito ? ' (incognito is on)' : ''}`);
       add('Language model', r.languageModel);
       if (r.voice) add('Voice', r.voice);
-      add('Stored', Object.entries(r.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ') || 'Nothing yet');
+      add('Stored', Object.entries(r.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${n === 1 ? k.replace(/ies$/, 'y').replace(/s$/, '') : k}`).join(', ') || 'Nothing yet');
       if (r.thirdParties.length) add('Services used', r.thirdParties.map((t) => `${t.name}: ${t.sends}`).join('; '));
       el.append(kv);
       break;

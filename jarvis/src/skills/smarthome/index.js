@@ -533,7 +533,8 @@ export function createSmartHomeSkill() {
     description: 'Controls lights, switches, fans, thermostats, locks, blinds and the security system through pluggable adapters (simulated, Home Assistant, Philips Hue).',
 
     async setup(ctx) {
-      const kind = ctx.config.smarthomeAdapter ?? 'simulated';
+      const kind = ctx.config.smarthomeAdapter
+        ?? (ctx.integrations?.isConfigured('homeassistant') ? 'homeassistant' : ctx.integrations?.isConfigured('hue') ? 'hue' : 'simulated');
       let adapter;
       try {
         adapter = createAdapter(kind, ctx.integrations?.config(kind) ?? {});

@@ -9,6 +9,29 @@ It runs on Node.js with one dependency, the official Anthropic SDK. Commands
 work offline with the built-in understanding. Add an Anthropic API key for
 open-ended conversation.
 
+## Standalone HTML version
+
+`standalone/jarvis.html` is the complete JARVIS in one file: the HUD, chat,
+voice, tasks, reminders, calendar, smart home, weather, news, search,
+learning, privacy controls and integrations. No server and no install are
+needed. Double-click it, or put it on any static host.
+
+- **Storage.** Your data stays in that browser's local storage. You can encrypt it with a passphrase in Settings, Privacy (AES-256-GCM, key derived with PBKDF2). There is no way to recover a forgotten passphrase.
+- **Keys.** Claude and ElevenLabs keys are entered in Settings, Integrations. They are kept in this browser and sent only to Anthropic and ElevenLabs. Set a passphrase if others use the computer.
+- **Limits.** A web page can only reach services that allow it (CORS):
+  - Open-Meteo, Wikipedia, Mastodon, Google Calendar, Anthropic and ElevenLabs work.
+  - Google News blocks pages, so headlines come from Hacker News instead.
+  - Summarizing a link fails on most sites. Paste the text after "summarize" instead.
+  - Home Assistant needs your page's origin in `http: cors_allowed_origins`. Philips Hue bridges and Slack webhooks don't allow pages at all.
+  - Reminders only fire while the page is open.
+- **Microphone.** Allow it when asked. If the browser blocks it on a `file://` page, serve the folder with any static server, such as `npx serve standalone`.
+
+Rebuild it after changing the sources:
+
+```bash
+npm run build:standalone
+```
+
 ## Quick start
 
 ```bash
@@ -85,6 +108,7 @@ All options are listed in `.env.example`.
 | `npm start` | Runs the server and dashboard |
 | `npm test` | Runs the test suite |
 | `npm run demo` | Prints a scripted conversation, no browser needed |
+| `npm run build:standalone` | Rebuilds `standalone/jarvis.html` |
 
 ## Connecting real devices and services
 
@@ -118,6 +142,8 @@ jarvis/
   src/skills/            smart home, tasks, weather, news, search, social, system
   src/integrations/      service catalog and credential registry
   src/server/            HTTP API and server-sent events
+  src/browser/           standalone build: browser store, in-page router, shims
   public/                dashboard (no build step)
+  standalone/jarvis.html the whole app in one HTML file (generated)
   test/                  node:test suites
 ```

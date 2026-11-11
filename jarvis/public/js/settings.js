@@ -140,7 +140,7 @@ export function createSettings(app) {
     add('Encryption', `${report.encryption.algorithm}, key from ${report.encryption.keySource}`);
     add('Language model', report.languageModel);
     if (report.voice) add('Voice', report.voice);
-    add('What is stored', Object.entries(report.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ') || 'Nothing yet');
+    add('What is stored', Object.entries(report.counts).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${n === 1 ? k.replace(/ies$/, 'y').replace(/s$/, '') : k}`).join(', ') || 'Nothing yet');
     if (report.thirdParties.length) add('Outside services', report.thirdParties.map((t) => `${t.name} (${t.sends})`).join('; '));
 
     const days = h('input', { type: 'number', min: 1, max: 3650, value: String(profile.retentionDays ?? 30) });
@@ -177,6 +177,7 @@ export function createSettings(app) {
         field('Keep conversation history for (days)', days),
         h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => app.download('/api/privacy/export', 'jarvis-export.json') }, icon('download', { size: 15 }), 'Export all my data')),
       ),
+      report.passphrase?.supported ? passphraseGroup(report.passphrase.enabled) : null,
       h('div', { class: 'group' }, h('h3', { text: 'Delete data' }),
         h('div', { class: 'callout is-danger' }, icon('alert'), h('span', { text: 'Deleting is permanent. Export first if you want a copy.' })),
         h('div', { class: 'danger-actions' },
@@ -187,6 +188,46 @@ export function createSettings(app) {
       ),
       h('div', { class: 'group' }, h('h3', { text: 'Recent activity log' }), audit.entries.length ? log : h('p', { class: 'empty', text: 'No activity recorded yet.' })),
     ];
+  }
+
+  // Standalone page only: encrypt the data kept in this browser.
+  function passphraseGroup(enabled) {
+    const pass = h('input', { type: 'password', autocomplete: 'new-password', minlength: 8, placeholder: 'At least 8 characters' });
+    const again = h('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Type it again' });
+    const note = h('small', { class: 'field' });
+    const save = h('button', { class: 'btn btn-primary', type: 'submit' }, enabled ? 'Change passphrase' : 'Encrypt my data');
+    const form = h('form', { class: 'stack' }, h('div', { class: 'field-row' }, h('label', { class: 'field' }, h('span', { text: enabled ? 'New passphrase' : 'Passphrase' }), pass), h('label', { class: 'field' }, h('span', { text: 'Confirm' }), again)), note, h('div', { class: 'danger-actions' }, save,
+      enabled ? h('button', {
+        class: 'btn', type: 'button',
+        onclick: async () => {
+          if (!(await confirmDialog({ title: 'Remove the passphrase?', text: 'Your data will be stored in this browser without encryption.', confirmLabel: 'Remove' }))) return;
+          await api('/api/privacy/passphrase', { method: 'POST', body: { passphrase: null } });
+          toast('Passphrase removed.', { iconName: 'unlock' });
+          app.refresh();
+          show('privacy');
+        },
+      }, 'Remove passphrase') : null));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (pass.value.length < 8) { note.textContent = 'Use at least 8 characters.'; return; }
+      if (pass.value !== again.value) { note.textContent = 'The two passphrases do not match.'; return; }
+      save.disabled = true;
+      note.textContent = 'Encrypting';
+      try {
+        await api('/api/privacy/passphrase', { method: 'POST', body: { passphrase: pass.value } });
+        toast('Your data is now encrypted. You will need the passphrase to open JARVIS.', { iconName: 'lock', timeout: 7000 });
+        app.refresh();
+        show('privacy');
+      } catch (error) {
+        note.textContent = error.message;
+        save.disabled = false;
+      }
+    });
+    return h('div', { class: 'group' }, h('h3', { text: 'Passphrase lock' }),
+      h('div', { class: 'callout' }, icon('lock'), h('span', { text: enabled
+        ? 'Everything JARVIS keeps in this browser is encrypted with AES-256. You are asked for the passphrase each time the page opens.'
+        : 'This page keeps your data in this browser. Set a passphrase to encrypt it with AES-256. There is no way to recover a forgotten passphrase.' })),
+      form);
   }
 
   // ------------------------------------------------------------- Integrations

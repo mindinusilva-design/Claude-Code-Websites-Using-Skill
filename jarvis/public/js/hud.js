@@ -57,11 +57,13 @@ function ringGauge({ size = 120, r = 46, width = 6, value = 0, warm = false, big
 }
 
 const meter = (label) => {
+  const name = h('span', { text: label });
   const value = h('b', { text: '–' });
   const fill = h('i', { style: 'width:0%' });
-  const el = h('div', { class: 'hud-meter' }, h('div', { class: 'hud-kv' }, h('span', { text: label }), value), h('div', { class: 'hud-meter-bar' }, fill));
+  const el = h('div', { class: 'hud-meter' }, h('div', { class: 'hud-kv' }, name, value), h('div', { class: 'hud-meter-bar' }, fill));
   return {
     el,
+    label(text) { name.textContent = text; },
     set(text, ratio, tone = '') {
       value.textContent = text;
       value.className = tone;
@@ -72,8 +74,9 @@ const meter = (label) => {
 };
 
 const kv = (label) => {
+  const name = h('span', { text: label });
   const value = h('b', { text: '–' });
-  return { el: h('div', { class: 'hud-kv' }, h('span', { text: label }), value), set(text, tone = '') { value.textContent = text; value.className = tone; } };
+  return { el: h('div', { class: 'hud-kv' }, name, value), label(text) { name.textContent = text; }, set(text, tone = '') { value.textContent = text; value.className = tone; } };
 };
 
 const widget = (title, ...children) => h('div', { class: 'hud-widget hud-frame' }, h('div', { class: 'hud-widget-title' }, title), ...children);
@@ -388,13 +391,20 @@ export function createHud(app) {
     if (!active() || document.hidden) return;
     try {
       const s = await api('/api/system');
+      const browser = s.source === 'browser';
+      refs.sys.cpu.label(browser ? 'Main thread' : 'CPU');
+      refs.sys.mem.label(browser ? 'JS heap' : 'Memory');
+      refs.sys.load.label(browser ? 'Processor' : 'Load average');
+      refs.sys.up.label(browser ? 'Session' : 'Host uptime');
+      refs.sys.jarvis.label(browser ? 'Device memory' : 'JARVIS memory');
+      const memPct = s.memory?.usedPct;
       refs.sys.cpu.set(`${s.cpu}%`, s.cpu / 100, s.cpu > 85 ? 'is-warm' : '');
-      refs.sys.mem.set(`${s.memory.usedPct}%`, s.memory.usedPct / 100, s.memory.usedPct > 90 ? 'is-warm' : '');
-      refs.sys.load.set(`${s.load} on ${s.cores} cores`);
+      refs.sys.mem.set(memPct == null ? 'n/a' : `${memPct}%`, (memPct ?? 0) / 100, memPct > 90 ? 'is-warm' : '');
+      refs.sys.load.set(browser ? `${s.cores} cores` : `${s.load} on ${s.cores} cores`);
       refs.sys.up.set(duration(s.uptime));
-      refs.sys.jarvis.set(`${s.jarvis.rssMb} MB`);
+      refs.sys.jarvis.set(browser ? (s.memory?.totalGb ? `${s.memory.totalGb} GB` : 'n/a') : `${s.jarvis.rssMb} MB`);
       setBar('cpu', s.cpu / 100, `${s.cpu}`);
-      setBar('mem', s.memory.usedPct / 100, `${s.memory.usedPct}`);
+      setBar('mem', (memPct ?? 0) / 100, memPct == null ? '–' : `${memPct}`);
     } catch { /* metrics are optional */ }
   }
   function startPolling() {
