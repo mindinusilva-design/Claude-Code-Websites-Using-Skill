@@ -1,11 +1,12 @@
-import { RuleEngine, normalize } from './rules.js';
+import { RuleEngine, normalize, isAffirmative, isNegative } from './rules.js';
 import { NaiveBayesClassifier } from './classifier.js';
 
 /**
  * Hybrid natural-language understanding.
  *
  *   1. Rules       - deterministic patterns from every skill (fast, offline).
- *   2. Classifier  - Naive Bayes that learns this user's phrasings from feedback.
+ *   2. Learned     - phrases the user corrected ("no, I meant ...") become aliases,
+ *                    and a Naive Bayes classifier generalizes from all feedback.
  *   3. Language    - Claude, for open-ended requests and anything the first two
  *                    layers are unsure about (handled by the kernel).
  *
@@ -13,9 +14,10 @@ import { NaiveBayesClassifier } from './classifier.js';
  * layer that produced the answer, so every decision is explainable.
  */
 export class NLU {
-  constructor({ rules = new RuleEngine(), classifier = new NaiveBayesClassifier(), threshold = 0.72, classifierThreshold = 0.8 } = {}) {
+  constructor({ rules = new RuleEngine(), classifier = new NaiveBayesClassifier(), threshold = 0.72, classifierThreshold = 0.8, aliasFor = null } = {}) {
     this.rules = rules;
     this.classifier = classifier;
+    this.aliasFor = aliasFor; // (normalized utterance) -> canonical command learned from a correction
     this.threshold = threshold;
     this.classifierThreshold = classifierThreshold;
   }
@@ -32,17 +34,31 @@ export class NLU {
     if (!trimmed) return { intents: [], confidence: 0, source: 'none', normalized: '' };
     const normalized = normalize(trimmed);
 
-    // An answer to a pending clarification question ("Which room?" -> "the kitchen").
-    if (context?.pending && normalized.split(' ').length <= 6) {
+    // An answer to a pending question: a yes/no confirmation, or a missing
+    // detail ("When should I remind you?" -> "tomorrow at 9").
+    if (context?.pending) {
       const pending = context.pending;
-      const direct = this.rules.match(trimmed, context)[0];
-      if (!direct || direct.confidence < 0.9) {
-        return {
-          intents: [{ intent: pending.intent, slots: { ...pending.slots, [pending.slot]: trimmed.replace(/^(the|in the|to)\s+/i, '') }, confidence: 0.9, source: 'clarification' }],
-          confidence: 0.9,
-          source: 'clarification',
-          normalized,
-        };
+      const yesNo = isAffirmative(trimmed) || isNegative(trimmed);
+      const answer = (value) => ({
+        intents: [{ intent: pending.intent, slots: { ...pending.slots, [pending.slot]: value }, confidence: 0.95, source: 'clarification' }],
+        confidence: 0.95,
+        source: 'clarification',
+        normalized,
+      });
+      if (pending.slot === 'confirm') {
+        if (yesNo) return answer(isAffirmative(trimmed) ? 'yes' : 'no');
+      } else if (!yesNo && normalized.split(' ').length <= 8) {
+        const direct = this.rules.match(trimmed, context)[0];
+        if (!direct || direct.confidence < 0.9) return answer(trimmed.replace(/^(the|in the|to)\s+/i, ''));
+      }
+    }
+
+    // A phrase the user has corrected before maps straight to what they meant.
+    const alias = this.aliasFor?.(normalized);
+    if (alias) {
+      const learned = this.rules.matchCompound(alias, context);
+      if (learned.length && Math.min(...learned.map((c) => c.confidence)) >= this.threshold) {
+        return { intents: learned.map((c) => ({ ...c, source: 'learned' })), confidence: Math.min(...learned.map((c) => c.confidence)), source: 'learned', normalized, alias };
       }
     }
 
@@ -73,4 +89,4 @@ export class NLU {
   }
 }
 
-export { RuleEngine, NaiveBayesClassifier, normalize };
+export { RuleEngine, NaiveBayesClassifier, normalize, isAffirmative, isNegative };

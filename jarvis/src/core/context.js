@@ -47,8 +47,10 @@ export class ConversationContext {
   resolve(intent, slots = {}) {
     const out = { ...slots };
     if (intent?.startsWith('smarthome.')) {
-      if (!out.devices?.length && !out.room && (out.pronoun || out.referent === 'it')) {
-        if (this.entities.lastDevices?.length) out.devices = this.entities.lastDevices;
+      if (!out.devices?.length && !out.room && !out.target && out.pronoun) {
+        const switchable = ['smarthome.power', 'smarthome.level', 'smarthome.color'].includes(intent);
+        const remembered = switchable && this.entities.lastSwitchable?.length ? this.entities.lastSwitchable : this.entities.lastDevices;
+        if (remembered?.length) out.devices = remembered;
         else if (this.entities.lastRoom) out.room = this.entities.lastRoom;
       }
       if (!out.room && !out.devices?.length && this.entities.lastRoom && out.inheritRoom) out.room = this.entities.lastRoom;

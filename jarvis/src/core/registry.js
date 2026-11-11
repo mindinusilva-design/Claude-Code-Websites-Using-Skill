@@ -40,8 +40,7 @@ export class SkillRegistry {
     }
     for (const route of skill.routes ?? []) this.routeList.push({ ...route, skillId: skill.id });
     this.skills.set(skill.id, skill);
-    skill.setup?.(ctx);
-    return this;
+    return Promise.resolve(skill.setup?.(ctx));
   }
 
   has(intent) {

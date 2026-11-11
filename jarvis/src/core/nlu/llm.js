@@ -110,6 +110,51 @@ export function createLanguageModel({
       }
     },
 
+    /** One-shot text generation (drafting posts, rewriting). */
+    async complete({ system, prompt, maxTokens = 4000 }) {
+      try {
+        const response = await anthropic.beta.messages.create({
+          model,
+          max_tokens: maxTokens,
+          betas: [FALLBACK_BETA],
+          fallbacks: 'default',
+          output_config: { effort: 'low' },
+          system,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        if (response.stop_reason === 'refusal') return { refused: true, category: response.stop_details?.category ?? null, text: '' };
+        const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+        return { text, usage: response.usage, model: response.model };
+      } catch (error) {
+        const info = classifyError(error);
+        logger.warn?.(`[jarvis] completion error (${info.error}): ${info.message}`);
+        return { text: '', ...info };
+      }
+    },
+
+    /** Answer a factual question strictly from retrieved sources. */
+    async answer({ question, sources }) {
+      const material = sources.map((s, i) => `<source index="${i + 1}" title="${s.title}" origin="${s.source}">\n${String(s.text).slice(0, 4000)}\n</source>`).join('\n\n');
+      try {
+        const response = await anthropic.beta.messages.create({
+          model,
+          max_tokens: 4000,
+          betas: [FALLBACK_BETA],
+          fallbacks: 'default',
+          output_config: { effort: 'low' },
+          system: 'You are JARVIS, a concise assistant. Answer the question using only the supplied sources. Reply in one to three plain sentences suitable for reading aloud, without markdown. If the sources do not contain the answer, say so briefly.',
+          messages: [{ role: 'user', content: `${material}\n\nQuestion: ${question}` }],
+        });
+        if (response.stop_reason === 'refusal') return { refused: true, category: response.stop_details?.category ?? null, text: '' };
+        const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+        return { text, usage: response.usage, model: response.model };
+      } catch (error) {
+        const info = classifyError(error);
+        logger.warn?.(`[jarvis] answer error (${info.error}): ${info.message}`);
+        return { text: '', ...info };
+      }
+    },
+
     /** Faithful summary of an article or page. */
     async summarize({ text, title = '', url = '', sentences = 4 }) {
       const MAX_CHARS = 120_000;

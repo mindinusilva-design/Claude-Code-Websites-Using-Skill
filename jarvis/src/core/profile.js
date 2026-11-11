@@ -62,7 +62,7 @@ export class Profile {
     entry.byHour[hour] += 1;
     entry.byDay[day] += 1;
     entry.lastAt = at.toISOString();
-    if (intent.startsWith('smarthome.')) entry.lastSlots = slots;
+    if (['smarthome.power', 'smarthome.scene', 'news.headlines'].includes(intent)) entry.lastSlots = slots;
     habits.total += 1;
     for (const device of slots.devices ?? []) {
       const d = (habits.devices[device] ??= { total: 0, byHour: Array(24).fill(0) });
@@ -104,13 +104,15 @@ export class Profile {
       const id = `habit:${intent}:${hour}`;
       const dismissedAt = this.data.dismissedSuggestions[id];
       if (dismissedAt && Date.now() - dismissedAt < 12 * 3600 * 1000) continue;
+      const described = describeHabit(intent, entry.lastSlots);
+      if (!described) continue;
       out.push({
         id,
         kind: 'habit',
         intent,
         slots: entry.lastSlots ?? {},
         score: Number((share * Math.log2(1 + near)).toFixed(3)),
-        text: describeHabit(intent, entry.lastSlots),
+        ...described,
       });
     }
     for (const item of extra) out.push({ score: 0.5, kind: 'context', ...item });
@@ -148,22 +150,27 @@ export class Profile {
   }
 }
 
+/** Wording for a habit suggestion plus the utterance that carries it out. */
 function describeHabit(intent, slots) {
-  const devices = slots?.devices?.length ? slots.devices.join(' and ') : slots?.room ? `the ${slots.room}` : null;
+  const devices = slots?.devices?.length ? slots.devices.map((d) => d.toLowerCase()).join(' and ') : slots?.target ?? (slots?.room ? `${slots.room} lights` : null);
   switch (intent) {
     case 'smarthome.power':
-      return devices ? `Turn ${slots.state ?? 'on'} ${devices}, like you usually do around now?` : 'Adjust your devices like you usually do around now?';
+      return devices
+        ? { text: `Turn ${slots.state ?? 'on'} the ${devices}, like you usually do around now?`, utterance: `turn ${slots.state ?? 'on'} the ${devices}` }
+        : { text: 'Check on your devices like you usually do around now?', utterance: 'list devices' };
     case 'smarthome.scene':
-      return `Run the "${slots?.scene ?? 'usual'}" scene like you usually do around now?`;
+      return { text: `Run the ${slots?.scene ?? 'usual'} scene like you usually do around now?`, utterance: `activate ${slots?.scene ?? 'home'} mode` };
     case 'weather.forecast':
-      return 'Want the weather update you usually check around now?';
+      return { text: 'Want the weather update you usually check around now?', utterance: "what's the weather" };
     case 'news.headlines':
-      return 'Want your usual news briefing?';
+      return { text: 'Want your usual news briefing?', utterance: slots?.topic ? `news about ${slots.topic}` : 'news briefing' };
     case 'tasks.list':
-      return 'Review your tasks like you usually do around now?';
+      return { text: 'Review your tasks like you usually do around now?', utterance: 'what are my tasks' };
     case 'calendar.agenda':
-      return 'Check your agenda like you usually do around now?';
+      return { text: 'Check your agenda like you usually do around now?', utterance: "what's on my calendar today" };
+    case 'reminders.list':
+      return { text: 'Check your reminders like you usually do around now?', utterance: 'what are my reminders' };
     default:
-      return `You often use "${intent.replace('.', ' ')}" around now. Want to?`;
+      return null;
   }
 }

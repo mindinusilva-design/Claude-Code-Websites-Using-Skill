@@ -5,19 +5,20 @@ import { createCipherSuite, generateSalt } from './crypto.js';
 
 /**
  * Local-first JSON document store. Each named collection is one file in the
- * data directory. Collections listed in `encrypted` are written as
- * AES-256-GCM blobs. With `dir: null` the store lives in memory only (tests,
- * incognito mode).
+ * data directory. Collections listed in `encrypted` (or every collection when
+ * `encrypted: 'all'`) are written as AES-256-GCM blobs. With `dir: null` the
+ * store lives in memory only (tests).
  */
 export class Store {
   constructor({ dir = null, secret = null, encrypted = [] } = {}) {
     this.dir = dir;
     this.cache = new Map();
-    this.encrypted = new Set(encrypted);
+    this.encryptAll = encrypted === 'all';
+    this.encrypted = new Set(this.encryptAll ? [] : encrypted);
     this.cipher = null;
     if (dir) mkdirSync(dir, { recursive: true });
     if (secret) this.cipher = createCipherSuite({ secret, salt: this.#loadSalt() });
-    if (this.encrypted.size && !this.cipher) {
+    if ((this.encrypted.size || this.encryptAll) && !this.cipher) {
       throw new Error('Store: encrypted collections require a secret (JARVIS_SECRET)');
     }
   }
@@ -57,7 +58,7 @@ export class Store {
     this.cache.set(name, value);
     if (!this.dir) return value;
     const path = this.#path(name);
-    const payload = this.encrypted.has(name) ? this.cipher.encrypt(value) : value;
+    const payload = this.encryptAll || this.encrypted.has(name) ? this.cipher.encrypt(value) : value;
     const tmp = `${path}.${process.pid}.tmp`;
     writeFileSync(tmp, JSON.stringify(payload, null, 2), { mode: 0o600 });
     renameSync(tmp, path);
