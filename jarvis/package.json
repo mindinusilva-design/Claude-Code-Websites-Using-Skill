@@ -1,0 +1,19 @@
+{
+  "name": "jarvis",
+  "version": "0.1.0",
+  "description": "JARVIS - a modular, privacy-first virtual assistant framework with a web dashboard, voice, smart home, tasks, search, and continuous learning.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/",
+    "demo": "node scripts/demo.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0"
+  }
+}
